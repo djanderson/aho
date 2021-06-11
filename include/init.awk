@@ -1,5 +1,10 @@
 @namespace "init"
 
+
 function init() {
-    print("in init")
+    if (system("test -d " paths::AhoDir) == 0) {
+        print paths::AhoDir " exists!"
+    } else {
+        print paths::AhoDir " doesn't exist!"        
+    }
 }

@@ -1,6 +1,10 @@
-@include "include/init.awk"
-@include "include/getopt.awk"
-@include "include/version.awk"
+# Utils and metadata
+@include "version.awk"
+@include "paths.awk"
+@include "getopt.awk"
+# Commands
+@include "init.awk"
+
 
 function print_usage() {
     print "usage: aho [--version] [--help] <command> [<args>]"
