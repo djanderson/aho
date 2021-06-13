@@ -2,7 +2,13 @@
 @include "version.awk"
 @include "paths.awk"
 @include "getopt.awk"
+@include "refs.awk"
+@include "branches.awk"
+@include "objects.awk"
+@include "head.awk"
+@include "index.awk"
 # Commands
+@include "config.awk"
 @include "init.awk"
 
 
@@ -16,6 +22,7 @@ function print_help() {
     print "Commands:"
     print "  init        Create an empty repo"
     print "  add         Add file contents to the index"
+    print "  config      Read or modify " paths::Aho "/config"
 }
 
 function print_version() {
@@ -36,7 +43,7 @@ BEGIN {
 
     while ((c = getopt::getopt(ARGC, ARGV, shortopts, longopts)) != -1) {
         if (c == "?") {
-            usage()
+            print_usage()
             exit 129
         }
         if (getopt::Optopt == "h" || getopt::Optopt == "help") {
@@ -49,16 +56,17 @@ BEGIN {
         }
     }
 
-    command = ARGV[getopt::Optind]
+    command = ARGV[getopt::Optind++]
 
     if (command == "init") {
-        init::init()
+        rc = init::run_command()
     } else if (command == "add") {
-        add::add()
+        rc = add::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"
         print_usage()
-        exit 1
+        rc = 1
     }
+    exit rc
 }

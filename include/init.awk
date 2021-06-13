@@ -1,10 +1,68 @@
 @namespace "init"
 
 
-function init() {
-    if (system("test -d " paths::AhoDir) == 0) {
-        print paths::AhoDir " exists!"
-    } else {
-        print paths::AhoDir " doesn't exist!"        
+function run_command(    shortopts, longopts, quiet, directory, path) {
+
+    shortopts = "hq"
+    longopts = "help,quiet"
+
+    while ((c = getopt::getopt(ARGC, ARGV, shortopts, longopts)) != -1) {
+        if (c == "?") {
+            print_usage()
+            return 129
+        }
+        if (getopt::Optopt == "h" || getopt::Optopt == "help") {
+            print_help()
+            return 0
+        }
+        if (getopt::Optopt == "q" || getopt::Optopt == "quiet") {
+            quiet = 1
+            continue
+        }
     }
+
+    directory = ARGV[getopt::Optind++]
+    if (ARGV[getopt::Optind]) {     # shouldn't have anything after directory
+        print_usage()
+        return 129
+    }
+
+    if (directory) {
+        sub(/\/$/, "", directory)   # remove trailing slash
+        path = directory "/" paths::Aho
+    } else {
+        path = paths::Aho
+    }
+
+    # Fail if path already exists or if we can't create it
+    if (system("test -d " path) == 0) {
+        print path " already exists" > "/dev/stderr"
+        return 1
+    } else if (system("mkdir -p " path) != 0) {
+        return 1
+    }
+
+    print "Unnamed repository; edit this file 'description' to name" \
+        " the repository." > (path "/description")
+    errors += branches::init(path)
+    errors += config::init(path)
+    errors += head::init(path)
+    errors += objects::init(path)
+    errors += refs::init(path)
+
+    if (!quiet && !erorrs) {
+        print "Initialized empty Git repository in " path
+    }
+
+    return errors
+}
+
+function print_usage() {
+    print "usage: aho init [-q | --quiet] [<directory>]"
+}
+
+function print_help() {
+    print_usage()
+    print
+    print "  -q, --quiet     Be quiet"
 }
