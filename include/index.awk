@@ -10,7 +10,7 @@ BEGIN {
     Path = "AHO_INDEX" in ENVIRON ? ENVIRON["AHO_INDEX"] : paths::Aho "/index"
     Exists = ! system("test -e " Path)
 
-    # Files is an 3-dimensional array-of-arrays, with layout
+    # Files is an array-of-arrays, with layout
     #
     #     Files[filepath] =
     #         IndexEntry[ctime] = 12345
