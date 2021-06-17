@@ -5,7 +5,8 @@ BEGIN {
     Path = paths::Aho "/HEAD"
 }
 
-function init(directory,    path) {
+function init(directory,    path)
+{
     if (!directory) {
         print "Must pass directory to init" > "/dev/stderr"
         return 1

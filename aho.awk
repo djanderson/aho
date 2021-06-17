@@ -1,5 +1,5 @@
-# Utils and metadata
 @include "version.awk"
+@include "utils.awk"
 @include "paths.awk"
 @include "getopt.awk"
 @include "refs.awk"
@@ -10,24 +10,10 @@
 # Commands
 @include "config.awk"
 @include "init.awk"
+@include "add.awk"
 
+@namespace "main"
 
-function print_usage() {
-    print "usage: aho [--version] [--help] <command> [<args>]"
-}
-
-function print_help() {
-    print_usage()
-    print
-    print "Commands:"
-    print "  init        Create an empty repo"
-    print "  add         Add file contents to the index"
-    print "  config      Read or modify " paths::Aho "/config"
-}
-
-function print_version() {
-    print "aho version " version::String
-}
 
 BEGIN {
     if (ARGC == 1) {
@@ -35,6 +21,11 @@ BEGIN {
         exit 1
     }
 
+    exit main()
+}
+
+function main(    shortopts, longopts, c, command, exitcode)
+{
     getopt::Optind = 1          # start at first option
     getopt::Opterr = 1          # print parse errors
 
@@ -44,29 +35,49 @@ BEGIN {
     while ((c = getopt::getopt(ARGC, ARGV, shortopts, longopts)) != -1) {
         if (c == "?") {
             print_usage()
-            exit 129
+            return 129
         }
         if (getopt::Optopt == "h" || getopt::Optopt == "help") {
             print_help()
-            exit 0
+            return 0
         }
         if (getopt::Optopt == "version") {
             print_version()
-            exit 0
+            return 0
         }
     }
 
     command = ARGV[getopt::Optind++]
 
     if (command == "init") {
-        rc = init::run_command()
+        exitcode = init::run_command()
     } else if (command == "add") {
-        rc = add::run_command()
+        exitcode = add::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"
         print_usage()
-        rc = 1
+        exitcode = 1
     }
-    exit rc
+    return exitcode    
+}
+
+function print_usage()
+{
+    print "usage: aho [--version] [--help] <command> [<args>]"
+}
+
+function print_help()
+{
+    print_usage()
+    print
+    print "Commands:"
+    print "  init        Create an empty repo"
+    print "  add         Add file contents to the index"
+    print "  config      Read or modify " paths::Aho "/config"
+}
+
+function print_version()
+{
+    print "aho version " version::String
 }

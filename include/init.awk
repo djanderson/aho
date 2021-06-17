@@ -1,8 +1,8 @@
 @namespace "init"
 
 
-function run_command(    shortopts, longopts, quiet, directory, path) {
-
+function run_command(    c, shortopts, longopts, quiet, directory, path, errors)
+{
     shortopts = "hq"
     longopts = "help,quiet"
 
@@ -44,24 +44,28 @@ function run_command(    shortopts, longopts, quiet, directory, path) {
 
     print "Unnamed repository; edit this file 'description' to name" \
         " the repository." > (path "/description")
+
+    errors = 0
     errors += branches::init(path)
     errors += config::init(path)
     errors += head::init(path)
     errors += objects::init(path)
     errors += refs::init(path)
 
-    if (!quiet && !erorrs) {
+    if (!quiet && !errors) {
         print "Initialized empty Git repository in " path
     }
 
     return errors
 }
 
-function print_usage() {
+function print_usage()
+{
     print "usage: aho init [-q | --quiet] [<directory>]"
 }
 
-function print_help() {
+function print_help()
+{
     print_usage()
     print
     print "  -q, --quiet     Be quiet"

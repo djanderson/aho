@@ -15,4 +15,12 @@ if (( GAWK_VERSION_MAJOR < 5 )); then
 fi
 
 export AWKPATH="$INCLUDE_DIR"
-exec gawk -f "$SRC_DIR"/aho.awk -- "$@"
+if (( TEST )); then
+    echo "Testing"
+    gawk -d -f "$SRC_DIR"/aho.awk -- "$@"
+    echo "awkvars.out"
+    grep -v '^[A-Z]*:' awkvars.out | sort -u
+    rm awkvars.out
+else
+    exec gawk -f "$SRC_DIR"/aho.awk -- "$@"
+fi
