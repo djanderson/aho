@@ -259,6 +259,9 @@ BEGIN {
     IntToByteMap[254] = "\xfe"
     IntToByteMap[255] = "\xff"
 
+    delete ByteToIntMap
+    init_b2i_map(ByteToIntMap)
+
     HexToByteMap["00"] = "\x00"
     HexToByteMap["01"] = "\x01"
     HexToByteMap["02"] = "\x02"
@@ -515,6 +518,17 @@ BEGIN {
     HexToByteMap["fd"] = "\xfd"
     HexToByteMap["fe"] = "\xfe"
     HexToByteMap["ff"] = "\xff"
+
+    delete ByteToHexMap
+    init_b2h_map(ByteToHexMap)
+
+    PaddingBytes[1] = "\0"
+    PaddingBytes[2] = "\0\0"
+    PaddingBytes[3] = "\0\0\0"
+    PaddingBytes[4] = "\0\0\0\0"
+    PaddingBytes[5] = "\0\0\0\0\0"
+    PaddingBytes[6] = "\0\0\0\0\0\0"
+    PaddingBytes[7] = "\0\0\0\0\0\0\0"
 }
 
 # Compute the sha1sum of a string
@@ -532,38 +546,118 @@ function sha1sum_str(str,    sha1sum, hash)
     return hash
 }
 
+# Return up to 7 null bytes "\0" for padding
+function null_bytes(n)
+{
+    if (n < 1)
+        return
+
+    assert(n < 8, "n < 8")
+
+    return PaddingBytes[n]
+}
+
 # Convert, e.g., "abcd" -> "\xab\xcd"
 # nbytes may be passed to left-pad
-function hex_to_bytes(hex, nbytes,    len, bytes, i)
+function hex_to_bytes(hex, nbytes,    len, npad, bytes, i)
 {
     len = length(hex)
     utils::assert(len % 2 == 0, "hex string has odd length")
 
-    bytes = ""
     # Left-pad zero bytes as necessary
-    for (i = int(len / 2) ; i < nbytes; i++) {
-        bytes = bytes "\x00"
+    npad = int(len / 2) - nbytes
+    while (npad > 7) {
+        bytes = bytes null_bytes(7)
+        npad -= 7
     }
+    bytes = bytes null_bytes(npad)
+
     for (i = 1; i < len; i += 2) {
-        bytes = bytes utils::HexToByteMap[substr(hex, i, 2)]
+        bytes = bytes h2b(substr(hex, i, 2))
     }
 
     return bytes
 }
 
+# Convert, e.g., "\xab\xcd" -> "abcd"
+# ndigits may be passed to left-pad
+function bytes_to_hex(bytes, ndigits,    len, hex)
+{
+    len = length(bytes)
+
+    # TODO: pad "0" to ndigits
+
+    for (i = 1; i < len; i++) {
+        hex = hex b2h(substr(bytes, i, 1))
+    }
+
+    return hex
+}
+
 # Map n from 0..2,147,483,647 to a 4-byte integer in big-endian order
 function num_to_uint32(n,    b1, b2, b3, b4)
 {
-    b4 = utils::IntToByteMap[n % 256]
+    b4 = i2b(n % 256)
     n = int(n / 256)
-    b3 = utils::IntToByteMap[n % 256]
+    b3 = i2b(n % 256)
     n = int(n / 256)
-    b2 = utils::IntToByteMap[n % 256]
+    b2 = i2b(n % 256)
     n = int(n / 256)
-    b1 = utils::IntToByteMap[n % 256]
-    n = int(n / 256)
+    b1 = i2b(n % 256)
 
     return b1 b2 b3 b4
+}
+
+# Map a 4-byte integer in big-endian order to an awk number
+function uint32_to_num(i,    n, b) {
+    split(i, b, "")
+    n = b2i(b[4])
+    n += b2i(b[3])
+    n += b2i(b[2])
+    n += b2i(b[1])
+    return n
+}
+
+# Function interface to IntToByteMap
+function i2b(i)
+{
+    assert(i > -1 && i < 256, "int not in range 0 - 255")
+    return IntToByteMap[i]
+}
+
+# Function interface to ByteToIntMap
+function b2i(b)
+{
+    assert(match(b, "[\x00-\xff]"), "byte not in range 0 - 255")
+    return ByteToIntMap[b]
+}
+
+# Function interface to HexToByteMap
+function h2b(h)
+{
+    assert(match(h, /^[[:xdigit:]]{2}$/), "hex not in range 00 - ff")
+    return HexToByteMap[h]
+}
+
+# Function interface to ByteToHexMap
+function b2h(b)
+{
+    assert(match(b, "[\x00-\xff]"), "byte not in range 0 - ff")
+    return ByteToHexMap[b]
+}
+
+function init_b2i_map(b2imap,    i)
+{
+    for (i in IntToByteMap) {
+        b2imap[IntToByteMap[i]] = i
+    }
+}
+
+function init_b2h_map(b2hmap,    h)
+{
+    for (h in HexToByteMap) {
+        b2hmap[HexToByteMap[h]] = h
+    }
 }
 
 # https://www.gnu.org/software/gawk/manual/html_node/Assert-Function.html
