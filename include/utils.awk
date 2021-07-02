@@ -565,7 +565,7 @@ function hex_to_bytes(hex, nbytes,    len, npad, bytes, i)
     utils::assert(len % 2 == 0, "hex string has odd length")
 
     # Left-pad zero bytes as necessary
-    npad = int(len / 2) - nbytes
+    npad = nbytes - int(len / 2)
     while (npad > 7) {
         bytes = bytes null_bytes(7)
         npad -= 7
