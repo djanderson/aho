@@ -662,6 +662,13 @@ function init_b2h_map(b2hmap,    h)
     }
 }
 
+# Bitwise hack for rounding up to powers of 2
+# https://stackoverflow.com/a/9194117
+function nearest_pow2(n)
+{
+    return awk::and(n + 7, awk::compl(7))
+}
+
 # https://www.gnu.org/software/gawk/manual/html_node/Assert-Function.html
 function assert(condition, string)
 {
@@ -669,4 +676,16 @@ function assert(condition, string)
         printf("assertion failed: %s\n", string) > "/dev/stderr"
         exit 1
     }
+}
+
+# https://www.gnu.org/software/gawk/manual/gawk.html#Readfile-Function
+function readfile(file,     tmp, save_rs)
+{
+    save_rs = RS
+    RS = "^$"
+    getline tmp < file
+    close(file)
+    RS = save_rs
+
+    return tmp
 }
