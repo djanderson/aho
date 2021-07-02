@@ -614,9 +614,9 @@ function num_to_uint32(n,    b1, b2, b3, b4)
 function uint32_to_num(i,    n, b) {
     split(i, b, "")
     n = b2i(b[4])
-    n += b2i(b[3])
-    n += b2i(b[2])
-    n += b2i(b[1])
+    n += b2i(b[3]) * 256 ** 1
+    n += b2i(b[2]) * 256 ** 2
+    n += b2i(b[1]) * 256 ** 3
     return n
 }
 
