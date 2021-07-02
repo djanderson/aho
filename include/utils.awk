@@ -581,13 +581,15 @@ function hex_to_bytes(hex, nbytes,    len, npad, bytes, i)
 
 # Convert, e.g., "\xab\xcd" -> "abcd"
 # ndigits may be passed to left-pad
-function bytes_to_hex(bytes, ndigits,    len, hex)
+function bytes_to_hex(bytes, ndigits,    npad, i, len, hex)
 {
     len = length(bytes)
 
-    # TODO: pad "0" to ndigits
+    for (npad = ndigits - len * 2; npad > 0; npad--) {
+        hex = hex "0"
+    }
 
-    for (i = 1; i < len; i++) {
+    for (i = 1; i <= len; i++) {
         hex = hex b2h(substr(bytes, i, 1))
     }
 
