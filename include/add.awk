@@ -45,11 +45,16 @@ function add_files(files, verbose,    file, filename, added, size, hash)
     added = objects::add(files)
     if (added) {
         indexfile::write()   
+
         if (verbose) {
             for (file in files) {
-                print "add '" files[file] "'"
+                file = files[file]
+                if (indexfile::Files[file]["new"]) {
+                    print "add '" file "'"
+                }
             }
         }
+
     }
 }
 

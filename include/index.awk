@@ -13,19 +13,18 @@ BEGIN {
     Header = "DIRC"
     Version = "\0\0\0\2"
 
-    # IndexEntry is an associative array that represents an entry in the index.
-    # It has the following keys (with associated 'stat' format sequences)
-    Keys[1] = "filename"        # %n filename from repo root without leading ./
-    Keys[2] = "ctime"           # %Z time last changed, seconds since epoch
-    Keys[3] = "mtime"           # %Y time last modified, seconds since epoch
-    Keys[4] = "dev"             # %d device number
-    Keys[5] = "ino"             # %i inode number
-    Keys[6] = "mode"            # %f raw mode in hex
-    Keys[7] = "uid"             # %u user ID of owner
-    Keys[8] = "gid"             # %g group ID of owner
-    Keys[9] = "size"            # %s file size in bytes
-    Keys[10] = "object-id"      # sha1sum of object file - set by objects::add
-    Keys[11] = "dirty"          # If 1, file needs to be added to object dir
+    # An IndexEntry has the following keys (with associated 'stat' format)
+    IndexEntry[1] = "filename"   # %n filename from repo root without leading ./
+    IndexEntry[2] = "ctime"      # %Z time last changed, seconds since epoch
+    IndexEntry[3] = "mtime"      # %Y time last modified, seconds since epoch
+    IndexEntry[4] = "dev"        # %d device number
+    IndexEntry[5] = "ino"        # %i inode number
+    IndexEntry[6] = "mode"       # %f raw mode in hex
+    IndexEntry[7] = "uid"        # %u user ID of owner
+    IndexEntry[8] = "gid"        # %g group ID of owner
+    IndexEntry[9] = "size"       # %s file size in bytes
+    IndexEntry[10] = "object-id" # sha1sum of object file - set by objects::add
+    IndexEntry[11] = "new"       # If 1, file needs to be added to object dir
 
     # Files is an associative array-of-arrays, with layout
     #
@@ -38,6 +37,9 @@ BEGIN {
     NFiles = indexfile::read(Files)
 }
 
+# Add files to the index.
+#
+# - files: array of path strings
 function add(files,    file, entry)
 {
     for (file in files) {
@@ -47,7 +49,10 @@ function add(files,    file, entry)
     }
 }
 
-# Parse an IndexEntry array from stat
+# Parse an IndexEntry array from stat.
+#
+# - entry: empty array where index entry will be written
+# - filepath: string
 function create_entry(entry, filepath,    stat, line, stats, idx)
 {
     stat = "stat --printf '%n %Z %Y %d %i %f %u %g %s' " filepath
@@ -55,12 +60,12 @@ function create_entry(entry, filepath,    stat, line, stats, idx)
     split(line, stats)
     close(stat)
 
-    for (idx in Keys) {
-        entry[Keys[idx]] = stats[idx]
+    for (key in IndexEntry) {
+        entry[IndexEntry[key]] = stats[key]
     }
 }
 
-# Add an IndexEntry to Files. If it differs from what's in index, mark dirty=1.
+# Add an IndexEntry to Files. If it differs from what's in index, mark new=1.
 function update_files_array(entry,    filename, in_index, key)
 {
     filename = entry["filename"]
@@ -69,14 +74,13 @@ function update_files_array(entry,    filename, in_index, key)
     if (in_index &&
         (entry["mtime"] == Files[filename]["mtime"] &&
          entry["ctime"] == Files[filename]["ctime"])) {
-        #print "DEBUG: " filename " up-to-date in index"
         return 0
     }
     delete Files[filename]
     for (key in entry) {
         Files[filename][key] = entry[key]
     }
-    Files[filename]["dirty"] = 1
+    Files[filename]["new"] = 1
     NFiles += ! in_index
 }
 
@@ -89,9 +93,6 @@ function read(Files,    bytes, nbytes)
     bytes = verify(utils::readfile(indexfile::Path))
 
     num_entries = utils::uint32_to_num(substr(bytes, 9, 4))
-    print "About to read num entries: " num_entries
-
-    # TODO: read entries and add to Files
     read_entries = 0
     offset = 13                 # byte after header
 
@@ -220,7 +221,7 @@ function read_flags(flags)
 }
 
 function debug_print_entry(entry,    key) {
-    for (key in Keys) {
-        print "  IndexEntry['" Keys[key] "'] = " entry[Keys[key]]
+    for (key in IndexEntry) {
+        print "  IndexEntry['" IndexEntry[key] "'] = " entry[IndexEntry[key]]
     }
 }

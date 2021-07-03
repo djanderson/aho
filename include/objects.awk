@@ -21,7 +21,7 @@ function add(files,    file, filename, size, hash, num_added)
 {
     for (file in files) {
         filename = files[file]
-        if (!indexfile::Files[filename]["dirty"]) {
+        if (!indexfile::Files[filename]["new"]) {
             continue
         }
         size = indexfile::Files[filename]["size"]
@@ -31,6 +31,7 @@ function add(files,    file, filename, size, hash, num_added)
             num_added++
         }
     }
+
     return num_added
 }
 
