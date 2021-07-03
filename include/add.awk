@@ -1,10 +1,10 @@
 @namespace "add"
 
 
-function run_command(    shortopts, longopts, c, verbose, pathspec)
+function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec)
 {
-    shortopts = "hv"
-    longopts = "help,verbose"
+    shortopts = "hvn"
+    longopts = "help,verbose,dry-run"
 
     while ((c = getopt::getopt(ARGC, ARGV, shortopts, longopts)) != -1) {
         if (c == "?") {
@@ -14,6 +14,10 @@ function run_command(    shortopts, longopts, c, verbose, pathspec)
         if (getopt::Optopt == "h" || getopt::Optopt == "help") {
             print_help()
             return 0
+        }
+        if (getopt::Optopt == "n" || getopt::Optopt == "dry-run") {
+            dryrun = 1
+            continue
         }
         if (getopt::Optopt == "v" || getopt::Optopt == "verbose") {
             verbose = 1
@@ -28,7 +32,7 @@ function run_command(    shortopts, longopts, c, verbose, pathspec)
             print "fatal: pathspec '" pathspec "' did not match any files"
             return 128
         }
-        add_files(files, verbose)
+        add_files(files, dryrun, verbose)
     }
 
     if (!got_pathspec) {
@@ -38,23 +42,25 @@ function run_command(    shortopts, longopts, c, verbose, pathspec)
     }
 }
 
-function add_files(files, verbose,    file, filename, added, size, hash)
+function add_files(files, dryrun, verbose,    file, added)
 {
     indexfile::add(files)
-    # objects::add modifies the indexfile::Files array with computed sha1sum
-    added = objects::add(files)
-    if (added) {
-        indexfile::write()   
 
-        if (verbose) {
-            for (file in files) {
-                file = files[file]
-                if (indexfile::Files[file]["new"]) {
-                    print "add '" file "'"
-                }
+    if (!dryrun) {
+        # objects::add adds object-id to indexfile::Files array
+        added = objects::add(files)
+        if (added) {
+            indexfile::write()
+        }
+    }
+
+    if (verbose) {
+        for (file in files) {
+            file = files[file]
+            if (!indexfile::up_to_date(file)) {
+                print "add '" file "'"
             }
         }
-
     }
 }
 
@@ -67,5 +73,6 @@ function print_help()
 {
     print_usage()
     print
+    print "  -n, --dry-run     Dry run"
     print "  -v, --verbose     Be verbose"
 }

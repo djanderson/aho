@@ -14,17 +14,18 @@ BEGIN {
     Version = "\0\0\0\2"
 
     # An IndexEntry has the following keys (with associated 'stat' format)
-    IndexEntry[1] = "filename"   # %n filename from repo root without leading ./
-    IndexEntry[2] = "ctime"      # %Z time last changed, seconds since epoch
-    IndexEntry[3] = "mtime"      # %Y time last modified, seconds since epoch
-    IndexEntry[4] = "dev"        # %d device number
-    IndexEntry[5] = "ino"        # %i inode number
-    IndexEntry[6] = "mode"       # %f raw mode in hex
-    IndexEntry[7] = "uid"        # %u user ID of owner
-    IndexEntry[8] = "gid"        # %g group ID of owner
-    IndexEntry[9] = "size"       # %s file size in bytes
-    IndexEntry[10] = "object-id" # sha1sum of object file - set by objects::add
-    IndexEntry[11] = "new"       # If 1, file needs to be added to object dir
+    IndexEntry[1] = "filename"    # %n path from repo root without leading ./
+    IndexEntry[2] = "ctime"       # %Z time last changed, seconds since epoch
+    IndexEntry[3] = "mtime"       # %Y time last modified, seconds since epoch
+    IndexEntry[4] = "dev"         # %d device number
+    IndexEntry[5] = "ino"         # %i inode number
+    IndexEntry[6] = "mode"        # %f raw mode in hex
+    IndexEntry[7] = "uid"         # %u user ID of owner
+    IndexEntry[8] = "gid"         # %g group ID of owner
+    IndexEntry[9] = "size"        # %s file size in bytes
+    IndexEntry[10] = "object-id"  # sha1sum of object file, set by objects::add
+    IndexEntry[11] = "up-to-date" # file is up-to-date in index and object tree
+
 
     # Files is an associative array-of-arrays, with layout
     #
@@ -63,9 +64,10 @@ function create_entry(entry, filepath,    stat, line, stats, idx)
     for (key in IndexEntry) {
         entry[IndexEntry[key]] = stats[key]
     }
+    entry["up-to-date"] = 0
 }
 
-# Add an IndexEntry to Files. If it differs from what's in index, mark new=1.
+# Add an IndexEntry to Files. Check if file is up-to-date.
 function update_files_array(entry,    filename, in_index, key)
 {
     filename = entry["filename"]
@@ -74,13 +76,13 @@ function update_files_array(entry,    filename, in_index, key)
     if (in_index &&
         (entry["mtime"] == Files[filename]["mtime"] &&
          entry["ctime"] == Files[filename]["ctime"])) {
+        entry["up-to-date"] = 1
         return 0
     }
     delete Files[filename]
     for (key in entry) {
         Files[filename][key] = entry[key]
     }
-    Files[filename]["new"] = 1
     NFiles += ! in_index
 }
 
@@ -113,6 +115,7 @@ function read(Files,    bytes, nbytes)
         Files[filename]["gid"] = utils::uint32_to_num(substr(bytes, offset + 32, 4))
         Files[filename]["size"] = utils::uint32_to_num(substr(bytes, offset + 36, 4))
         Files[filename]["object-id"] = utils::bytes_to_hex(substr(bytes, offset + 40, 20))
+        Files[filename]["up-to-date"] = 1
 
         offset += utils::nearest_pow2(62 + filename_len + 1)
         read_entries++
@@ -160,6 +163,12 @@ function write(    file, filename, index_bytes, bytes, nbytes, hash)
     index_bytes = index_bytes utils::hex_to_bytes(hash, 20)
 
     printf("%s", index_bytes) > indexfile::Path
+}
+
+# Return 1 if file is up-to-date in index, otherwise 0.
+function up_to_date(filename)
+{
+    return Files[filename]["up-to-date"]
 }
 
 # Verify index header, version, and checksum. Return bytes without checksum.

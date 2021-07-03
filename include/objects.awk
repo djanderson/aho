@@ -21,7 +21,7 @@ function add(files,    file, filename, size, hash, num_added)
 {
     for (file in files) {
         filename = files[file]
-        if (!indexfile::Files[filename]["new"]) {
+        if (indexfile::up_to_date(filename)) {
             continue
         }
         size = indexfile::Files[filename]["size"]
