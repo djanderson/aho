@@ -4,37 +4,104 @@ A Git implementation in AWK.
 
 # But why?
 
-This is a silly personal project to explore the deep corners of GNU Awk
-(_gawk_) and Git.
+To explore the deep corners of GNU Awk (_gawk_) and Git.
 
-# Capabilities
+ - Can AWK read and write Git's binary `index` file?
+ - Where does AWK start to break down as a general-purpose programming language?
+ - How does Git magic actually work?
+ - etc...
+
+# Quickstart
+
+You'll need `gawk` >= 5.0, and I currently use `pigz` for zlib compression.
+Everything else should be provided by coreutils.
 
 ```bash
-$ ./aho init  # initialize a Git repo
+$ source ./modpath
+$ aho init
 Initialized empty Git repository in .aho
-$ ./aho add .  # add files to the object tree and index
-$ GIT_DIR=.aho git ls-files --stage  # git can read the index
+$ aho add -v .
+add 'LICENSE'
+add 'modpath'
+add 'include/add.awk'
+add 'include/refs.awk'
+add 'include/config.awk'
+[...]
+$ echo "neat" > testfile
+$ aho add -v .
+add 'testfile'
+$ tree .aho/
+.aho/
+├── branches
+├── config
+├── description
+├── HEAD
+├── index
+├── objects
+│   ├── 16
+│   │   └── dfbb852d5efb5e1a75ad336c8f62ebb94a82f0
+│   ├── 42
+│   │   └── 2c6135819b57720ace71e3c6c97eb072b5b430
+│   ├── 51
+│   │   └── 2807153b4d4abffab8490ce97e5a164fe7de1f
+│   ├── 62
+│   │   └── 9effea54a58d8734f57d9412a5964f69578477
+│   ├── 64
+│   │   └── c66bb623af4a10aa3bca2da143c75ab4e2186f
+│   ├── 75
+│   │   └── c4bb2d662072539ec9c9df59e0bc38b08859a1
+│   ├── 86
+│   │   └── 57d76021987bc2cd3c2d4c5958fdab053c6326
+│   ├── 8a
+│   │   └── 79bad5398edfa6d7e9ed53f5a8571c4acd51c8
+│   ├── 90
+│   │   └── f5018152506ead374c091df7aa4bd50d1f2711
+│   ├── 91
+│   │   └── 89ced5c87ed27aba7e69056a4977707f8eea1f
+│   ├── 92
+│   │   └── 9acae2b1c6a028db6fd951ec409cb403e7c644
+│   ├── a4
+│   │   ├── f760268b8927dde9e5c456c6609f966596726b
+│   │   └── f8a94be65ff3db1e4eae6f1b2d17be29549831
+│   ├── a6
+│   │   └── ccf43e60c7876e67e3358952c0bf60a2882eef
+│   ├── a9
+│   │   └── 622230b6300414b725e4f30bdd7384036eadec
+│   ├── ae
+│   │   └── 8710f78478cd81223c6129aaadd3b9c0bbfac9
+│   ├── b1
+│   │   └── c9cc72d22414a18635d33656dbc216ff774e57
+│   ├── b7
+│   │   └── c251ec5e8689b8b8198e80c87bad85981e2633
+│   ├── bc
+│   │   └── e7654988c975a479cefa67dc22aad49a22569d
+│   ├── be
+│   │   └── be8ccf15bc60314702a9a00e1416fc9b223b00
+│   ├── d8
+│   │   └── 8545d4bb077b2e3fcefbddcf5bae071b426e9f
+│   ├── e3
+│   │   └── 451647a3d96b27022772ac1a6b864868a2ec22
+│   ├── ea
+│   │   └── b633c732fc64ee486eeb22c0e588d110b64a09
+│   ├── f2
+│   │   └── aeb629f8513094675557138b3f83dbfa5a4895
+│   └── f8
+│       └── 8631a9692c0b9f9bc2f484c6fc68587bb90770
+└── refs
+    ├── heads
+    └── tags
+
+29 directories, 29 files
+$ GIT_DIR=.aho git ls-files --stage
 100664 d88545d4bb077b2e3fcefbddcf5bae071b426e9f 0	.gitignore
 100664 a6ccf43e60c7876e67e3358952c0bf60a2882eef 0	LICENSE
-100664 06ba7ad002f435d3f1f5dbf021021f2560363c09 0	README.md
-100775 9fafffe816334a9fc749e78b6cd591fb8e32b6b4 0	aho
-100664 f7d5b2ea0d7eb1b7801b6d01cd5914536d0f68a2 0	aho.awk
-100664 c7d89dadeb1f8934f3552bb64b26b2d725f4f72d 0	include/add.awk
-100664 184bb6f53d4110d0ec45df7f51a5cd4c2da981d2 0	include/branches.awk
-100664 270a52d40ab63a720dcb0f9e9f04828ae24c6a09 0	include/config.awk
-100664 629effea54a58d8734f57d9412a5964f69578477 0	include/getopt.awk
-100664 d6d18f3fd4749812c04d704f0a6fb3915e559fab 0	include/head.awk
-100664 98ff3d0993ea52a6a95a797428f18bddd80f26ba 0	include/index.awk
-100664 92ce735a8d7e528f61905324fbe6118a79557add 0	include/init.awk
-100664 50e74f2be9da7bf8d4edae0be0a9a1dda855ab6e 0	include/objects.awk
-100664 44a22e0b97418e09b403a79c47a6f8092a9c0bee 0	include/paths.awk
-100664 41eb8fd31ebbd8b403cb09a94f0eb4e7e420e1fc 0	include/refs.awk
-100664 ee2ee78936c9d98b5dcef00a7de49adba474a800 0	include/utils.awk
-100664 8a79bad5398edfa6d7e9ed53f5a8571c4acd51c8 0	include/version.awk
-# blob objects are byte-compatible with git's
-$ sha1sum .aho/objects/06/ba7ad002f435d3f1f5dbf021021f2560363c09 .git/objects/06/ba7ad002f435d3f1f5dbf021021f2560363c09 
-94fb1982888bc5fb2d69c8f567afff55c84ca56b  .aho/objects/06/ba7ad002f435d3f1f5dbf021021f2560363c09
-94fb1982888bc5fb2d69c8f567afff55c84ca56b  .git/objects/06/ba7ad002f435d3f1f5dbf021021f2560363c09
+100664 f88631a9692c0b9f9bc2f484c6fc68587bb90770 0	README.md
+100775 8657d76021987bc2cd3c2d4c5958fdab053c6326 0	aho
+100664 f2aeb629f8513094675557138b3f83dbfa5a4895 0	aho.awk
+100664 b1c9cc72d22414a18635d33656dbc216ff774e57 0	include/add.awk
+100664 512807153b4d4abffab8490ce97e5a164fe7de1f 0	include/branches.awk
+100664 16dfbb852d5efb5e1a75ad336c8f62ebb94a82f0 0	include/config.awk
+[...]
 ```
 
 I don't plan to add network functionality to this (even though you totally
@@ -45,6 +112,7 @@ _clone_ or _push_.
 
 - [X] init
 - [X] add
+- [ ] rm
 - [ ] status
 - [ ] commit
 - [ ] config
