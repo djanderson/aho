@@ -1,0 +1,3 @@
+# Source this file to add 'aho' to path: source modpath
+
+export PATH="$PWD:$PATH"

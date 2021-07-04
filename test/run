@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -euo pipefail
+
+source ../modpath
+
+rm -rf .aho
+
+aho init
+aho add -v .
+aho rm --cached run README.md
+
+# Verify git can read the index file
+GIT_DIR=.aho git ls-files --stage
