@@ -223,8 +223,7 @@ function verify(bytes,    nbytes, expected_checksum, checksum, header, version,
         print "fatal: index file corrupt" > "/dev/stderr"
         exit 128
     }
-    # Strip checksum
-    return substr(bytes, 1, nbytes - 19)
+    return bytes
 }
 
 function build_flags(filename,    len, b1, b2)
