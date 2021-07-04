@@ -1,7 +1,8 @@
 @namespace "add"
 
 
-function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec)
+function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec,
+                         got_pathspec)
 {
     shortopts = "hvn"
     longopts = "help,verbose,dry-run"
@@ -27,7 +28,7 @@ function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec)
 
     while ((pathspec = ARGV[getopt::Optind++])) {
         got_pathspec = 1
-        paths::expand_pathspec(files, pathspec)
+        path::expand_pathspec(files, pathspec)
         if (length(files) == 0) {
             print "fatal: pathspec '" pathspec "' did not match any files"
             return 128

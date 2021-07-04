@@ -5,12 +5,8 @@ INCLUDE_DIR="$SRC_DIR"/include
 GAWK_VERSION=$(gawk --version | head -n 1 | cut -d ' ' -f 3 | tr -d ',')
 GAWK_VERSION_MAJOR=$(cut -d '.' -f 1 <<< "$GAWK_VERSION")
 
-function echo_err() {
-    echo "$@" > /dev/stderr
-}
-
 if (( GAWK_VERSION_MAJOR < 5 )); then
-    echo_err "gawk 5.0.0 or higher required, found $GAWK_VERSION"
+    echo "gawk 5.0.0 or higher required, found $GAWK_VERSION" > /dev/stderr
     exit 1
 fi
 

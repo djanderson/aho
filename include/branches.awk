@@ -2,7 +2,7 @@
 
 
 BEGIN {
-    Path = paths::Aho "/branches"
+    Path = path::Aho "/branches"
 }
 
 function init(directory,    path)

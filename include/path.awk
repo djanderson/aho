@@ -1,4 +1,4 @@
-@namespace "paths"
+@namespace "path"
 
 
 BEGIN {
@@ -10,14 +10,19 @@ BEGIN {
 # Fill array 'files' with all files matching 'pathspec'
 function expand_pathspec(files, pathspec,    searchstr, cmd, dir, file, i)
 {
-    dir = dirname(pathspec)
-    file = basename(pathspec)
+    if (is_dir(pathspec)) {
+        dir = pathspec
+    } else {
+        dir = dirname(pathspec)
+        file = basename(pathspec)
+    }
 
     if (file && file != ".")
         searchstr = "-name '" file "'"
 
     cmd = "find " dir " -type f " \
         "-not -path '*/\\.git/*' " \
+        "-not -path '*/\\.aho/*' " \
         "-not -path '*\\" Aho "/*' " \
         searchstr
 
@@ -49,5 +54,14 @@ function basename(path,    found)
         return substr(path, found + 1)
     } else {
         return path
+    }
+}
+
+function is_dir(path)
+{
+    if (path) {
+        return ! system("test -d " path)
+    } else {
+        return 0
     }
 }

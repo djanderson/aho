@@ -2,7 +2,7 @@
 
 
 BEGIN {
-    Path = paths::Aho "/HEAD"
+    Path = path::Aho "/HEAD"
 }
 
 function init(directory,    path)

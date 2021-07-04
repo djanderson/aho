@@ -7,7 +7,7 @@
 
 
 BEGIN {
-    Path = "AHO_INDEX" in ENVIRON ? ENVIRON["AHO_INDEX"] : paths::Aho "/index"
+    Path = "AHO_INDEX" in ENVIRON ? ENVIRON["AHO_INDEX"] : path::Aho "/index"
     Exists = ! system("test -e " Path)
 
     Header = "DIRC"
@@ -35,7 +35,7 @@ BEGIN {
     #         ...
     #     ...
     delete Files
-    NFiles = indexfile::read(Files)
+    indexfile::read(Files)
 }
 
 # Add files to the index.
@@ -46,7 +46,23 @@ function add(files,    file, entry)
     for (file in files) {
         delete entry
         create_entry(entry, files[file])
-        update_files_array(entry)
+        if (!up_to_date(entry["filename"])) {
+            add_entry(entry)
+        }
+    }
+}
+
+# Remove files from the index.
+#
+# - files: array of path strings
+function remove(files, force,    file, entry)
+{
+    for (file in files) {
+        delete entry
+        create_entry(entry, files[file])
+        if (force || up_to_date(entry["filename"])) {
+            delete Files[entry["filename"]]
+        }
     }
 }
 
@@ -64,26 +80,30 @@ function create_entry(entry, filepath,    stat, line, stats, idx)
     for (key in IndexEntry) {
         entry[IndexEntry[key]] = stats[key]
     }
-    entry["up-to-date"] = 0
+
+    set_up_to_date(entry)
 }
 
-# Add an IndexEntry to Files. Check if file is up-to-date.
-function update_files_array(entry,    filename, in_index, key)
+# Add an IndexEntry to Files.
+function add_entry(entry,    filename, key)
 {
     filename = entry["filename"]
-    in_index = filename in Files
-    # TODO: check if this how Git decides to add a file to index
-    if (in_index &&
-        (entry["mtime"] == Files[filename]["mtime"] &&
-         entry["ctime"] == Files[filename]["ctime"])) {
-        entry["up-to-date"] = 1
-        return 0
-    }
+
     delete Files[filename]
     for (key in entry) {
         Files[filename][key] = entry[key]
     }
-    NFiles += ! in_index
+}
+
+# Given an entry, set its up-to-date field
+function set_up_to_date(entry,    filename, in_index)
+{
+    filename = entry["filename"]
+    in_index = filename in Files
+    # TODO: check if this how Git decides file is up-to-date
+    entry["up-to-date"] = (in_index &&
+                           (entry["mtime"] == Files[filename]["mtime"] &&
+                            entry["ctime"] == Files[filename]["ctime"]))
 }
 
 function read(Files,    bytes, nbytes)
@@ -119,7 +139,6 @@ function read(Files,    bytes, nbytes)
 
         offset += utils::nearest_pow2(62 + filename_len + 1)
         read_entries++
-        NFiles++
     }
 
     return num_entries
@@ -129,11 +148,10 @@ function read(Files,    bytes, nbytes)
 function write(    file, filename, index_bytes, bytes, nbytes, hash)
 {
     # filenames will be a unique and sorted array of filenames in Files
-    utils::assert(awk::asorti(Files, filenames) == NFiles,
-                  "length(filenames) == NFiles")
+    awk::asorti(Files, filenames)
 
     # 4-byte signature DIRC (dircache), 4-byte version 2, and number of entries
-    index_bytes = Header Version utils::num_to_uint32(NFiles)
+    index_bytes = Header Version utils::num_to_uint32(length(Files))
 
     # Serialize each IndexEntry in the Files array in sorted order
     for (f in filenames) {

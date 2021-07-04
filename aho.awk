@@ -1,6 +1,6 @@
 @include "version.awk"
 @include "utils.awk"
-@include "paths.awk"
+@include "path.awk"
 @include "getopt.awk"
 @include "refs.awk"
 @include "branches.awk"
@@ -11,6 +11,7 @@
 @include "config.awk"
 @include "init.awk"
 @include "add.awk"
+@include "rm.awk"
 
 @namespace "main"
 
@@ -53,6 +54,8 @@ function main(    shortopts, longopts, c, command, exitcode)
         exitcode = init::run_command()
     } else if (command == "add") {
         exitcode = add::run_command()
+    } else if (command == "rm") {
+        exitcode = rm::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"
@@ -74,7 +77,8 @@ function print_help()
     print "Commands:"
     print "  init        Create an empty repo"
     print "  add         Add file contents to the index"
-    print "  config      Read or modify " paths::Aho "/config"
+    print "  rm          Remove files from the working tree and from the index"
+    print "  config      Read or modify " path::Aho "/config"
 }
 
 function print_version()
