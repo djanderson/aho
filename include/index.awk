@@ -25,7 +25,7 @@ BEGIN {
     IndexEntry[9] = "size"        # %s file size in bytes
     IndexEntry[10] = "object-id"  # sha1sum of object file, set by objects::add
     IndexEntry[11] = "up-to-date" # file is up-to-date in index and object tree
-
+    IndexEntry[12] = "removed"    # if set to 1, will not be written to index
 
     # Files is an associative array-of-arrays, with layout
     #
@@ -46,7 +46,7 @@ function add(files,    file, entry)
     for (file in files) {
         delete entry
         create_entry(entry, files[file])
-        if (!up_to_date(entry["filename"])) {
+        if (!entry["up-to-date"]) {
             add_entry(entry)
         }
     }
@@ -54,15 +54,12 @@ function add(files,    file, entry)
 
 # Remove files from the index.
 #
-# - files: array of path strings
-function remove(files, force,    file, entry)
+# - file: array of path strings
+function remove_files(files,    file)
 {
     for (file in files) {
-        delete entry
-        create_entry(entry, files[file])
-        if (force || up_to_date(entry["filename"])) {
-            delete Files[entry["filename"]]
-        }
+        file = files[file]
+        Files[file]["removed"] = 1
     }
 }
 
@@ -70,7 +67,7 @@ function remove(files, force,    file, entry)
 #
 # - entry: empty array where index entry will be written
 # - filepath: string
-function create_entry(entry, filepath,    stat, line, stats, idx)
+function create_entry(entry, filepath,    stat, line, stats, idx, key)
 {
     stat = "stat --printf '%n %Z %Y %d %i %f %u %g %s' " filepath
     stat | getline line
@@ -81,7 +78,7 @@ function create_entry(entry, filepath,    stat, line, stats, idx)
         entry[IndexEntry[key]] = stats[key]
     }
 
-    set_up_to_date(entry)
+    entry["up-to-date"] = entry_up_to_date(entry)
 }
 
 # Add an IndexEntry to Files.
@@ -95,18 +92,37 @@ function add_entry(entry,    filename, key)
     }
 }
 
-# Given an entry, set its up-to-date field
-function set_up_to_date(entry,    filename, in_index)
+function copy_entry(from, to,    key)
 {
-    filename = entry["filename"]
-    in_index = filename in Files
-    # TODO: check if this how Git decides file is up-to-date
-    entry["up-to-date"] = (in_index &&
-                           (entry["mtime"] == Files[filename]["mtime"] &&
-                            entry["ctime"] == Files[filename]["ctime"]))
+    for (key in IndexEntry) {
+        key = IndexEntry[key]
+        to[key] = from[key]
+    }
 }
 
-function read(Files,    bytes, nbytes)
+# Given an IndexEntry, return 1 if up-to-date in index
+function entry_up_to_date(entry,    filename)
+{
+    filename = entry["filename"]
+    # TODO: check if this how Git decides file is up-to-date
+    return (indexfile::has_file(filename) &&
+            (entry["mtime"] == Files[filename]["mtime"] &&
+             entry["ctime"] == Files[filename]["ctime"]))
+}
+
+function file_up_to_date(file)
+{
+    return has_file(file) && Files[file]["up-to-date"]
+}
+
+# Return 1 if index contains an entry with the given filename
+function has_file(filename)
+{
+    return filename in Files
+}
+
+function read(Files,    bytes, nbytes, num_entries, read_entries, filename,
+                        filename_len, offset)
 {
     if (!Exists)
         return
@@ -136,6 +152,7 @@ function read(Files,    bytes, nbytes)
         Files[filename]["size"] = utils::uint32_to_num(substr(bytes, offset + 36, 4))
         Files[filename]["object-id"] = utils::bytes_to_hex(substr(bytes, offset + 40, 20))
         Files[filename]["up-to-date"] = 1
+        Files[filename]["removed"] = 0
 
         offset += utils::nearest_pow2(62 + filename_len + 1)
         read_entries++
@@ -145,29 +162,34 @@ function read(Files,    bytes, nbytes)
 }
 
 # Write Files to index
-function write(    file, filename, index_bytes, bytes, nbytes, hash)
+function write(    files, file, filename, index_bytes, bytes, nbytes, hash)
 {
-    # filenames will be a unique and sorted array of filenames in Files
-    awk::asorti(Files, filenames)
+    delete files                # local copy of Files without removed entries
+    for (file in Files) {
+        if (!Files[file]["removed"]) {
+            files[file][1]      # force subarray with tmp entry
+            copy_entry(Files[file], files[file])
+        }
+    }
 
     # 4-byte signature DIRC (dircache), 4-byte version 2, and number of entries
-    index_bytes = Header Version utils::num_to_uint32(length(Files))
+    index_bytes = Header Version utils::num_to_uint32(length(files))
 
     # Serialize each IndexEntry in the Files array in sorted order
-    for (f in filenames) {
-        filename = filenames[f]
+    PROCINFO["sorted_in"] = "@ind_str_asc"
+    for (filename in files) {
         bytes = ""
-        bytes = bytes utils::num_to_uint32(Files[filename]["ctime"])
+        bytes = bytes utils::num_to_uint32(files[filename]["ctime"])
         bytes = bytes utils::num_to_uint32(0) # 0 nanoseconds
-        bytes = bytes utils::num_to_uint32(Files[filename]["mtime"])
+        bytes = bytes utils::num_to_uint32(files[filename]["mtime"])
         bytes = bytes utils::num_to_uint32(0) # 0 nanoseconds
-        bytes = bytes utils::num_to_uint32(Files[filename]["dev"])
-        bytes = bytes utils::num_to_uint32(Files[filename]["ino"])
-        bytes = bytes utils::hex_to_bytes(Files[filename]["mode"], 4)
-        bytes = bytes utils::num_to_uint32(Files[filename]["uid"])
-        bytes = bytes utils::num_to_uint32(Files[filename]["gid"])
-        bytes = bytes utils::num_to_uint32(Files[filename]["size"])
-        bytes = bytes utils::hex_to_bytes(Files[filename]["object-id"], 20)
+        bytes = bytes utils::num_to_uint32(files[filename]["dev"])
+        bytes = bytes utils::num_to_uint32(files[filename]["ino"])
+        bytes = bytes utils::hex_to_bytes(files[filename]["mode"], 4)
+        bytes = bytes utils::num_to_uint32(files[filename]["uid"])
+        bytes = bytes utils::num_to_uint32(files[filename]["gid"])
+        bytes = bytes utils::num_to_uint32(files[filename]["size"])
+        bytes = bytes utils::hex_to_bytes(files[filename]["object-id"], 20)
         bytes = bytes build_flags(filename)
         bytes = bytes filename "\0"
         nbytes = length(bytes)
@@ -183,15 +205,9 @@ function write(    file, filename, index_bytes, bytes, nbytes, hash)
     printf("%s", index_bytes) > indexfile::Path
 }
 
-# Return 1 if file is up-to-date in index, otherwise 0.
-function up_to_date(filename)
-{
-    return Files[filename]["up-to-date"]
-}
-
 # Verify index header, version, and checksum. Return bytes without checksum.
 function verify(bytes,    nbytes, expected_checksum, checksum, header, version,
-                          failed)
+                          failed, hdrhex, key, vernum)
 {
     nbytes = length(bytes)
     if (nbytes < 22) {

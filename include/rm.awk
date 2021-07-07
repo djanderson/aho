@@ -1,8 +1,8 @@
 @namespace "rm"
 
 
-function run_command(    shortopts, longopts, c, dryrun, quiet, recurse,
-                         cached, files, pathspec)
+function run_command(    shortopts, longopts, c, dryrun, quiet, cached,
+                         recurse, force, files, pathspec, got_pathspec)
 {
     shortopts = "hnqr"
     longopts = "help,dry-run,quiet,cached"
@@ -18,19 +18,14 @@ function run_command(    shortopts, longopts, c, dryrun, quiet, recurse,
         }
         if (getopt::Optopt == "n" || getopt::Optopt == "dry-run") {
             dryrun = 1
-            continue
-        }
-        if (getopt::Optopt == "q" || getopt::Optopt == "quiet") {
+        } else if (getopt::Optopt == "q" || getopt::Optopt == "quiet") {
             quiet = 1
-            continue
-        }
-        if (getopt::Optopt == "r") {
-            recurse = 1
-            continue
-        }
-        if (getopt::Optopt == "cached") {
+        } else if (getopt::Optopt == "cached") {
             cached = 1
-            continue
+        } else if (getopt::Optopt == "f" || getopt::Optopt == "force") {
+            force = 1
+        } else if (getopt::Optopt == "r") {
+            recurse = 1
         }
     }
 
@@ -48,7 +43,7 @@ function run_command(    shortopts, longopts, c, dryrun, quiet, recurse,
             print "fatal: pathspec '" pathspec "' did not match any files"
             return 128
         }
-        remove_files(files, dryrun, quiet, recurse, cached)
+        remove_files(pathspec, files, dryrun, quiet, cached, force, recurse)
     }
 
     if (!got_pathspec) {
@@ -57,10 +52,59 @@ function run_command(    shortopts, longopts, c, dryrun, quiet, recurse,
     }
 }
 
-function remove_files(files, dryrun, quiet, recurse, cached)
+function remove_files(pathspec, files, dryrun, quiet, cached, recurse, force,
+                      
+                      n, modified, file, filestr, cmd)
 {
+    # Check that all files are tracked in the index
+    for (file in files) {
+        file = files[file]
+        if (!indexfile::has_file(file)) {
+            print "fatal: pathspec '" file "' did not match any files"
+            exit 128
+        }
+    }
+
+    # Just marks index[file][removed] = 1; not applied until indexfile::write
+    indexfile::remove_files(files)
+
+    if (!force) {
+        delete modified
+        for (file in files) {
+            file = files[file]
+            if (!indexfile::file_up_to_date(file)) {
+                modified[n++] = file
+            }
+        }
+        if (n) {
+            filestr = n > 1 ? "files have" : "file has"
+            print "error: the following " filestr " local modifications:" \
+                > "/dev/stderr"
+            for (file in modified) {
+                print "    " file > "/dev/stderr"
+            }
+            print "(use --cached to keep the file, or -f to force removal)" \
+                > "/dev/stderr"
+            exit 1
+        }
+    }
+
+    if (!dryrun) {
+        # Do the deletion
+        if (!cached) {
+            if (recurse) {
+                cmd = "rm -r "
+            } else {
+                cmd = "rm "
+            }
+            utils::assert(!system(cmd pathspec), "rm command failed")
+        }
+        
+        indexfile::write()
+    }
     
     if (!quiet) {
+        PROCINFO["sorted_in"] = "@val_str_asc"
         for (file in files) {
             file = files[file]
             print "rm '" file "'"

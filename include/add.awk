@@ -2,7 +2,7 @@
 
 
 function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec,
-                         got_pathspec)
+                         got_pathspec, files)
 {
     shortopts = "hvn"
     longopts = "help,verbose,dry-run"
@@ -56,9 +56,10 @@ function add_files(files, dryrun, verbose,    file, added)
     }
 
     if (verbose) {
+        PROCINFO["sorted_in"] = "@val_str_asc"
         for (file in files) {
             file = files[file]
-            if (!indexfile::up_to_date(file)) {
+            if (!indexfile::file_up_to_date(file)) {
                 print "add '" file "'"
             }
         }
