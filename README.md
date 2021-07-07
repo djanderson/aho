@@ -111,8 +111,7 @@ _clone_ or _push_.
 # TODO:
 
 - [X] init
-- [X] add
-- [ ] rm
+- [X] add/rm
 - [ ] status
 - [ ] commit
 - [ ] config
