@@ -2,7 +2,11 @@
 
 
 BEGIN {
-    Path = path::Aho "/objects"
+    if ("AHO_OBJECT_DIR" in ENVIRON) {
+        Dir = ENVIRON["AHO_OBJECT_DIR"]
+    } else {
+        Dir = path::AbsAhoDir "/objects"
+    }
 }
 
 function init(directory,    path)
@@ -49,12 +53,12 @@ function add_blob(filename, size,    blob, line, sha1sum, hash, first2, rest,
 
     first2 = substr(hash, 1, 2)
     rest = substr(hash, 3)
-    if (system("mkdir -p " objects::Path "/" first2) != 0) {
+    if (system("mkdir -p " objects::Dir "/" first2) != 0) {
         print "Failed to make object path" > "/dev/stderr"
         return 0
     }
 
-    objfile = objects::Path "/" first2 "/" rest
+    objfile = objects::Dir "/" first2 "/" rest
     zlib = "pigz --zlib --fast --stdout > " objfile
     printf("%s", blob) | zlib
     close(zlib)

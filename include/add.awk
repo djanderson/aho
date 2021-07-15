@@ -1,11 +1,11 @@
 @namespace "add"
 
 
-function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec,
-                         got_pathspec, files)
+function run_command(    shortopts, longopts, c, dryrun, verbose, force,
+                         pathspec, got_pathspec, f, files)
 {
-    shortopts = "hvn"
-    longopts = "help,verbose,dry-run"
+    shortopts = "hvnf"
+    longopts = "help,verbose,dry-run,force"
 
     while ((c = getopt::getopt(ARGC, ARGV, shortopts, longopts)) != -1) {
         if (c == "?") {
@@ -24,6 +24,10 @@ function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec,
             verbose = 1
             continue
         }
+        if (getopt::Optopt == "f" || getopt::Optopt == "force") {
+            force = 1
+            continue
+        }
     }
 
     while ((pathspec = ARGV[getopt::Optind++])) {
@@ -33,6 +37,9 @@ function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec,
             print "fatal: pathspec '" pathspec "' did not match any files"
             return 128
         }
+        if (!force) {
+            prune_ignored(files)
+        }
         add_files(files, dryrun, verbose)
     }
 
@@ -40,6 +47,29 @@ function run_command(    shortopts, longopts, c, dryrun, verbose, pathspec,
         print "Nothing specified, nothing added." > "/dev/stderr"
         print "Maybe you want to say 'aho add .'?" > "/dev/stderr"
         return 0
+    }
+}
+
+function prune_ignored(files,    copy, ignored, i, j, n)
+{
+    # Make a local copy and then clear files
+    for (i in files) {
+        copy[i] = files[i]
+    }
+    delete files
+
+    # Repopulate files with all non-ignored files
+    for (i in copy) {
+        ignored = 1
+        for (j in workingtree::Files) {
+            if (copy[i] == workingtree::Files[j]) {
+                ignored = 0
+                break
+            }
+        }
+        if (!ignored) {
+            files[++n] = copy[i]
+        }
     }
 }
 

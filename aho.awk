@@ -7,6 +7,7 @@
 @include "objects.awk"
 @include "head.awk"
 @include "index.awk"
+@include "workingtree.awk"
 # Commands
 @include "config.awk"
 @include "init.awk"
@@ -50,6 +51,10 @@ function main(    shortopts, longopts, c, command, exitcode)
 
     command = ARGV[getopt::Optind++]
 
+    if (command != "init") {
+        path::assert_in_repo()
+    }
+
     if (command == "init") {
         exitcode = init::run_command()
     } else if (command == "add") {
@@ -62,7 +67,7 @@ function main(    shortopts, longopts, c, command, exitcode)
         print_usage()
         exitcode = 1
     }
-    return exitcode    
+    return exitcode
 }
 
 function print_usage()
@@ -78,7 +83,7 @@ function print_help()
     print "  init        Create an empty repo"
     print "  add         Add file contents to the index"
     print "  rm          Remove files from the working tree and from the index"
-    print "  config      Read or modify " path::Aho "/config"
+    print "  config      Read or modify " path::AhoDir "/config"
 }
 
 function print_version()

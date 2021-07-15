@@ -1,14 +1,18 @@
 # Read and write the index file.
 #
-# Primary reference: 
+# Primary reference:
 # https://github.com/git/git/blob/master/Documentation/technical/index-format.txt
 
 @namespace "indexfile"          # index is a reserved identifier
 
 
 BEGIN {
-    Path = "AHO_INDEX" in ENVIRON ? ENVIRON["AHO_INDEX"] : path::Aho "/index"
-    Exists = ! system("test -e " Path)
+    if ("AHO_INDEX_FILE" in ENVIRON) {
+        Path = ENVIRON["AHO_INDEX_FILE"]
+    } else {
+        Path = path::AbsAhoDir "/index"
+    }
+    Exists = path::is_file(Path)
 
     Header = "DIRC"
     Version = "\0\0\0\2"
@@ -66,10 +70,11 @@ function remove_files(files,    file)
 # Parse an IndexEntry array from stat.
 #
 # - entry: empty array where index entry will be written
-# - filepath: string
-function create_entry(entry, filepath,    stat, line, stats, idx, key)
+# - filepath: string path relative to repo root
+function create_entry(entry, filepath,    abspath, stat, line, stats, idx, key)
 {
-    stat = "stat --printf '%n %Z %Y %d %i %f %u %g %s' " filepath
+    abspath = path::Root "/" filepath
+    stat = "stat --printf '%n %Z %Y %d %i %f %u %g %s' " abspath
     stat | getline line
     split(line, stats)
     close(stat)
@@ -77,7 +82,7 @@ function create_entry(entry, filepath,    stat, line, stats, idx, key)
     for (key in IndexEntry) {
         entry[IndexEntry[key]] = stats[key]
     }
-
+    entry["filename"] = filepath # use relative file path instead of absolute
     entry["up-to-date"] = entry_up_to_date(entry)
 }
 

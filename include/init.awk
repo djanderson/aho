@@ -29,9 +29,9 @@ function run_command(    c, shortopts, longopts, quiet, directory, path, errors)
 
     if (directory) {
         sub(/\/$/, "", directory)   # remove trailing slash
-        path = directory "/" path::Aho
+        path = directory "/" path::AhoDir
     } else {
-        path = path::Aho
+        path = path::AhoDir
     }
 
     # Fail if path already exists or if we can't create it

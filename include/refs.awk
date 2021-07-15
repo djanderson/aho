@@ -2,7 +2,7 @@
 
 
 BEGIN {
-    Path = path::Aho "/refs"
+    Dir = path::AhoDir "/refs"
 }
 
 function init(directory,    path)

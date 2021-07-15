@@ -52,7 +52,7 @@ function run_command(    shortopts, longopts, c, dryrun, quiet, cached,
     }
 }
 
-function remove_files(pathspec, files, dryrun, quiet, cached, recurse, force,
+function remove_files(pathspec, files, dryrun, quiet, cached, force, recurse,
                       
                       n, modified, file, filestr, cmd)
 {
@@ -93,10 +93,11 @@ function remove_files(pathspec, files, dryrun, quiet, cached, recurse, force,
         # Do the deletion
         if (!cached) {
             if (recurse) {
-                cmd = "rm -r "
+                cmd = "rm -rd "
             } else {
                 cmd = "rm "
             }
+            print "rm cmd: " cmd
             utils::assert(!system(cmd pathspec), "rm command failed")
         }
         
