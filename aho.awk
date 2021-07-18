@@ -13,6 +13,7 @@
 @include "init.awk"
 @include "add.awk"
 @include "rm.awk"
+@include "commit.awk"
 
 @namespace "main"
 
@@ -61,6 +62,8 @@ function main(    shortopts, longopts, c, command, exitcode)
         exitcode = add::run_command()
     } else if (command == "rm") {
         exitcode = rm::run_command()
+    } else if (command == "commit") {
+        exitcode = commit::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"
