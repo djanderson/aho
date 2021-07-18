@@ -107,4 +107,5 @@ function print_help()
     print
     print "  -n, --dry-run     Dry run"
     print "  -v, --verbose     Be verbose"
+    print "  -f, --force       Allow adding otherwise ignored files"
 }
