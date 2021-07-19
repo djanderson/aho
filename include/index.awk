@@ -17,19 +17,19 @@ BEGIN {
     Header = "DIRC"
     Version = "\0\0\0\2"
 
-    # An IndexEntry has the following keys (with associated 'stat' format)
-    IndexEntry[1] = "filename"    # %n path from repo root without leading ./
-    IndexEntry[2] = "ctime"       # %Z time last changed, seconds since epoch
-    IndexEntry[3] = "mtime"       # %Y time last modified, seconds since epoch
-    IndexEntry[4] = "dev"         # %d device number
-    IndexEntry[5] = "ino"         # %i inode number
-    IndexEntry[6] = "mode"        # %f raw mode in hex
-    IndexEntry[7] = "uid"         # %u user ID of owner
-    IndexEntry[8] = "gid"         # %g group ID of owner
-    IndexEntry[9] = "size"        # %s file size in bytes
-    IndexEntry[10] = "object-id"  # sha1sum of object file, set by objects::add
-    IndexEntry[11] = "up-to-date" # file is up-to-date in index and object tree
-    IndexEntry[12] = "removed"    # if set to 1, will not be written to index
+    # An IndexEntry has the following keys
+    IndexEntry[1] = "filename"    # str: path from repo root without leading ./
+    IndexEntry[2] = "ctime"       # num: time last changed, seconds since epoch
+    IndexEntry[3] = "mtime"       # num: time last modified, seconds since epoch
+    IndexEntry[4] = "dev"         # num: device number
+    IndexEntry[5] = "ino"         # num: inode number
+    IndexEntry[6] = "mode"        # num: raw mode
+    IndexEntry[7] = "uid"         # num: user ID of owner
+    IndexEntry[8] = "gid"         # num: group ID of owner
+    IndexEntry[9] = "size"        # num: file size in bytes
+    IndexEntry[10] = "object-id"  # str: sha1sum of object
+    IndexEntry[11] = "up-to-date" # num: if 1, entry is up-to-date in index
+    IndexEntry[12] = "removed"    # num: if 1, entry will not be written out
 
     # Files is an associative array-of-arrays, with layout
     #
@@ -71,18 +71,14 @@ function remove_files(files,    file)
 #
 # - entry: empty array where index entry will be written
 # - filepath: string path relative to repo root
-function create_entry(entry, filepath,    abspath, stat, line, stats, idx, key)
+function create_entry(entry, filepath,    stats, key)
 {
-    abspath = path::Root "/" filepath
-    stat = "stat --printf '%n %Z %Y %d %i %f %u %g %s' " abspath
-    stat | getline line
-    split(line, stats)
-    close(stat)
+    stat::stat_file(filepath, stats)
 
     for (key in IndexEntry) {
         entry[IndexEntry[key]] = stats[key]
     }
-    entry["filename"] = filepath # use relative file path instead of absolute
+
     entry["up-to-date"] = entry_up_to_date(entry)
 }
 
@@ -151,7 +147,7 @@ function read(Files,    bytes, nbytes, num_entries, read_entries, filename,
         Files[filename]["mtime"] = utils::uint32_to_num(substr(bytes, offset + 8, 4))
         Files[filename]["dev"] = utils::uint32_to_num(substr(bytes, offset + 16, 4))
         Files[filename]["ino"] = utils::uint32_to_num(substr(bytes, offset + 20, 4))
-        Files[filename]["mode"] = utils::bytes_to_hex(substr(bytes, offset + 26, 2), 2)
+        Files[filename]["mode"] = utils::uint32_to_num(substr(bytes, offset + 24, 4))
         Files[filename]["uid"] = utils::uint32_to_num(substr(bytes, offset + 28, 4))
         Files[filename]["gid"] = utils::uint32_to_num(substr(bytes, offset + 32, 4))
         Files[filename]["size"] = utils::uint32_to_num(substr(bytes, offset + 36, 4))
@@ -190,7 +186,7 @@ function write(    files, file, filename, index_bytes, bytes, nbytes, hash)
         bytes = bytes utils::num_to_uint32(0) # 0 nanoseconds
         bytes = bytes utils::num_to_uint32(files[filename]["dev"])
         bytes = bytes utils::num_to_uint32(files[filename]["ino"])
-        bytes = bytes utils::hex_to_bytes(files[filename]["mode"], 4)
+        bytes = bytes utils::num_to_uint32(files[filename]["mode"])
         bytes = bytes utils::num_to_uint32(files[filename]["uid"])
         bytes = bytes utils::num_to_uint32(files[filename]["gid"])
         bytes = bytes utils::num_to_uint32(files[filename]["size"])

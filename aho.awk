@@ -1,6 +1,7 @@
 @include "version.awk"
 @include "utils.awk"
 @include "path.awk"
+@include "stat.awk"
 @include "getopt.awk"
 @include "refs.awk"
 @include "branches.awk"
