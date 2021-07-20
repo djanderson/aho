@@ -134,3 +134,95 @@ function exists(path)
         return 0
     }
 }
+
+# Given an array of filenames, return a multidimentional tree structure.
+# For example, for the file list
+#
+#    test
+#    test/README.md
+#    test/a
+#    test/run
+#    test/dir
+#    test/dir/b
+#    test/dir/c
+#    aho.awk
+#    LICENSE
+#    aho
+#
+# produces the tree stucture
+#
+#    tree["test"] = [
+#        "README.md" = "",
+#        "a" = "",
+#        "run" = "",
+#        "dir" = [
+#            "b" = "",
+#            "c" = ""
+#        ]
+#    ]
+#    tree["aho.awk"] = ""
+#    tree["LICENSE"] = ""
+#    tree["aho"] = ""
+#
+function make_tree(tree, files,    file)
+{
+    PROCINFO["sorted_in"] = "@ind_str_asc"
+    for (file in files) {
+
+    }
+}
+
+# Print the tree; return the printed string
+function print_tree(tree, indent, depth, acc,    name, line)
+{
+    PROCINFO["sorted_in"] = "@val_type_asc" # breadth-first search
+    indent = awk::typeof(indent) == "untyped" ? 2 : indent
+    for (name in tree) {
+        if (awk::typeof(tree[name]) == "array") {
+            line = sprintf("%" depth * indent "s%s\n", "", name "/")
+            printf(line)
+            acc = acc line
+            acc = print_tree(tree[name], indent, depth + 1, acc)
+        } else {
+            line = sprintf("%" depth * indent "s%s\n", "", name)
+            printf(line)
+            acc = acc line
+        }
+    }
+    return acc
+}
+
+
+#######
+# TESTS
+#######
+
+function test_print_tree(    tree, actual, expected)
+{
+    delete tree
+    delete test["test"]
+    tree["test"]["README.md"] = ""
+    tree["test"]["a"] = ""
+    tree["test"]["run"] = ""
+    delete tree["test"]["dir"]
+    tree["test"]["dir"]["b"] = ""
+    tree["test"]["dir"]["c"] = ""
+    tree["aho.awk"] = ""
+    tree["LICENSE"] = ""
+    tree["aho"] = ""
+
+    actual = print_tree(tree)
+    expected =          \
+        "LICENSE\n"     \
+        "aho\n"         \
+        "aho.awk\n"     \
+        "test/\n"       \
+        "  README.md\n" \
+        "  a\n"         \
+        "  run\n"       \
+        "  dir/\n"      \
+        "    b\n"       \
+        "    c\n"
+
+    utils::assert(actual == expected, "test_print_tree")
+}

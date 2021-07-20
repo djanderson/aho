@@ -2,7 +2,6 @@
 
 
 BEGIN {
-
     # stat st_mode bitfield constants - from `man 7 inode`
 
     S_IFMT   = 0170000   # bit mask for the file type bit field
