@@ -163,11 +163,35 @@ function exists(path)
 # If the value is an (empty) string, the index represents a filename. If the
 # value is an array, the index represents a directory name. And empty
 # directory's value is an empty array.
-function make_tree(tree, files,    file)
+function make_tree(tree, files,    file, parts)
 {
-    PROCINFO["sorted_in"] = "@ind_str_asc"
+    PROCINFO["sorted_in"] = "@val_type_asc"
     for (file in files) {
+        file = files[file]
+        if (path::is_file(file)) { # skip directory names
+            split(file, parts, "/")
+            make_single_tree(tree, parts, length(parts), 1)
+        }
+    }
+}
 
+# Given file "test/dir/c", return tree["test"]["dir"]["c"] = ""
+#
+# Basic idea from https://stackoverflow.com/a/43946907
+function make_single_tree(tree, parts, nparts, depth, empty)
+{
+    if (empty) {
+        delete tree[EMPTYTREE]
+        empty = 0
+    }
+    if (depth < nparts) {
+        if (!(parts[depth] in tree)) {
+            tree[parts[depth]][EMPTYTREE] # ensure tree[parts[depth]] is array
+            empty = 1
+        }
+        make_single_tree(tree[parts[depth]], parts, nparts, depth + 1, empty)
+    } else {
+        tree[parts[depth]] = ""
     }
 }
 
@@ -201,7 +225,7 @@ function print_tree(tree, indent, depth, acc,    name, line)
 function test_print_tree(    tree, actual, expected)
 {
     delete tree
-    delete test["test"]
+    delete tree["test"]
     tree["test"]["README.md"] = ""
     tree["test"]["a"] = ""
     tree["test"]["run"] = ""

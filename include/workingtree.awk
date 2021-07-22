@@ -13,6 +13,11 @@ BEGIN {
     if (path::InRepo) {
         load_files(Files, path::Root, Ignore)
     }
+
+    delete Tree
+    if (path::InRepo) {
+        path::make_tree(Tree, Files)
+    }
 }
 
 function load_ignore(ignore, ignorefile,    line, n)
@@ -40,9 +45,13 @@ function load_ignore(ignore, ignorefile,    line, n)
 # .gitignore file into a term in a `find` command. If the pattern is a
 # directory (ends with /), then any matching directory is pruned with the
 # syntax
+#
 #     \( -type d -[whole]name PAT -prune \)
+#
 # otherwise either a file or directory can be ignored with the syntax
+#
 #     -not -[whole]name PAT1 -not -[whole]name PAT2 ... -print
+#
 # where PAT and name/wholename are combined to best match the described
 # behavior in `man gitignore`.
 #
