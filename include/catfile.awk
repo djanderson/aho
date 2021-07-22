@@ -2,7 +2,8 @@
 
 
 function run_command(    shortopts, longopts, c, show_type, show_size, type,
-                         size, pprint, object, objpath)
+                         size, pprint, object, bytes, objpath, end_of_hdr,
+                         end_of_type, header, rest)
 {
     shortopts = "htsp"
     longopts = "help"
