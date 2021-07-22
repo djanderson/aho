@@ -95,9 +95,8 @@ Thanks!
 - [ ] commit
 - [ ] config
 - [ ] ls-files
-- [ ] cat-file
+- [X] cat-file
 
 I don't plan to add network functionality to this (even though you totally
 [can](https://www.gnu.org/software/gawk/manual/gawkinet/gawkinet.html)), so no
 _clone_ or _push_.
-

@@ -15,6 +15,7 @@
 @include "add.awk"
 @include "rm.awk"
 @include "commit.awk"
+@include "catfile.awk"
 
 @namespace "main"
 
@@ -65,6 +66,8 @@ function main(    shortopts, longopts, c, command, exitcode)
         exitcode = rm::run_command()
     } else if (command == "commit") {
         exitcode = commit::run_command()
+    } else if (command == "cat-file") {
+        exitcode = catfile::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"

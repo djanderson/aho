@@ -136,7 +136,7 @@ function exists(path)
 }
 
 # Given an array of filenames, return a multidimentional tree structure.
-# For example, for the file list
+# For example, the file list
 #
 #    test
 #    test/README.md
@@ -151,19 +151,18 @@ function exists(path)
 #
 # produces the tree stucture
 #
-#    tree["test"] = [
-#        "README.md" = "",
-#        "a" = "",
-#        "run" = "",
-#        "dir" = [
-#            "b" = "",
-#            "c" = ""
-#        ]
-#    ]
+#    tree["test"]["README.md"] = ""
+#    tree["test"]["a"] = ""
+#    tree["test"]["run"] = ""
+#    tree["test"]["dir"]["b"] = ""
+#    tree["test"]["dir"]["c"] = ""
 #    tree["aho.awk"] = ""
 #    tree["LICENSE"] = ""
 #    tree["aho"] = ""
 #
+# If the value is an (empty) string, the index represents a filename. If the
+# value is an array, the index represents a directory name. And empty
+# directory's value is an empty array.
 function make_tree(tree, files,    file)
 {
     PROCINFO["sorted_in"] = "@ind_str_asc"
@@ -175,7 +174,9 @@ function make_tree(tree, files,    file)
 # Print the tree; return the printed string
 function print_tree(tree, indent, depth, acc,    name, line)
 {
-    PROCINFO["sorted_in"] = "@val_type_asc" # breadth-first search
+    # The following will cause a breadth-first search because files (string
+    # value types) are visited before directories (array value types)
+    PROCINFO["sorted_in"] = "@val_type_asc"
     indent = awk::typeof(indent) == "untyped" ? 2 : indent
     for (name in tree) {
         if (awk::typeof(tree[name]) == "array") {
