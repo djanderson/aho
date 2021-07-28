@@ -21,7 +21,7 @@ function init(directory,    path)
     return system("mkdir -p " path)
 }
 
-function add(files,    file, filename, size, hash, num_added)
+function add_files(files,    file, filename, size, hash, num_added)
 {
     for (file in files) {
         filename = files[file]

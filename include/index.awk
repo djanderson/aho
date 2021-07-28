@@ -155,6 +155,8 @@ function read(Files,    bytes, nbytes, num_entries, read_entries, filename,
         Files[filename]["up-to-date"] = 1
         Files[filename]["removed"] = 0
 
+        # Each entry is 62 fixed bytes, a NULL-terminated filename, and then as
+        # many NULL bytes as required to make the total length a power of 2
         offset += utils::nearest_pow2(62 + filename_len + 1)
         read_entries++
     }
@@ -168,7 +170,7 @@ function write(    files, file, filename, index_bytes, bytes, nbytes, hash)
     delete files                # local copy of Files without removed entries
     for (file in Files) {
         if (!Files[file]["removed"]) {
-            files[file][1]      # force subarray with tmp entry
+            files[file][EMPTYTREE] # ensure files[file] is passed as array
             copy_entry(Files[file], files[file])
         }
     }

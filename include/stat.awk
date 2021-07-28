@@ -2,6 +2,12 @@
 
 
 BEGIN {
+    # Canonical Git modes
+    ModeFile  = 0100644  # Regular file
+    ModeXFile = 0100755  # Executable file
+    ModeDir   = 040000   # Directory
+    ModeLnk   = 0120000  # Symbolic link
+
     # stat st_mode bitfield constants - from `man 7 inode`
 
     S_IFMT   = 0170000   # bit mask for the file type bit field
@@ -56,14 +62,14 @@ function stat_file(relpath, stats,    abspath, cmd, line, mode) {
     mode = awk::strtonum("0x" stats[6])
     if (s_isreg(mode)) {
         if (owner_has_execute(mode)) {
-            mode = 0100755
+            mode = ModeXFile
         } else {
-            mode = 0100644
+            mode = ModeFile
         }
     } else if (s_isdir(mode)) {
-        mode = 040000
+        mode = ModeDir
     } else if (s_islnk(mode)) {
-        mode = 0120000
+        mode = ModeLnk
     }
     stats[6] = mode
 }

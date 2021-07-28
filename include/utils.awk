@@ -689,3 +689,10 @@ function readfile(file,     tmp, save_rs)
 
     return tmp
 }
+
+# Return the first n characters of a commit hash, default 7
+function short_hash(commit, n)
+{
+    n = n ? n : 7
+    return substr(commit, 1, n)
+}

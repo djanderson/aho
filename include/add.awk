@@ -78,8 +78,8 @@ function add_files(files, dryrun, verbose,    file, added)
     indexfile::add(files)
 
     if (!dryrun) {
-        # objects::add adds object-id to indexfile::Files array
-        added = objects::add(files)
+        # objects::add_files adds object-id to indexfile::Files array
+        added = objects::add_files(files)
         if (added) {
             indexfile::write()
         }
