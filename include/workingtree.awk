@@ -16,7 +16,7 @@ BEGIN {
 
     delete Tree
     if (path::InRepo) {
-        path::make_tree(Tree, Files)
+        tree::add_files(Tree, Files)
     }
 }
 
