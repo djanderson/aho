@@ -1,6 +1,7 @@
 @include "version.awk"
 @include "utils.awk"
 @include "path.awk"
+@include "tree.awk"
 @include "stat.awk"
 @include "getopt.awk"
 @include "refs.awk"
@@ -16,6 +17,7 @@
 @include "rm.awk"
 @include "commit.awk"
 @include "catfile.awk"
+@include "status.awk"
 
 @namespace "main"
 
@@ -68,6 +70,8 @@ function main(    shortopts, longopts, c, command, exitcode)
         exitcode = commit::run_command()
     } else if (command == "cat-file") {
         exitcode = catfile::run_command()
+    } else if (command == "status") {
+        exitcode = status::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"
