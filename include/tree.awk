@@ -43,7 +43,7 @@ function add_files(tree, files,    file, parts)
 
 # Given file "test/dir/c", add tree["test"]["dir"]["c"] = ""
 #
-# Basic idea from https://stackoverflow.com/a/43946907
+# Based on https://stackoverflow.com/a/43946907
 function add_file(tree, parts, nparts, depth, empty)
 {
     if (empty) {
@@ -83,7 +83,7 @@ function walk_bfs(tree, visitdir, leavedir, visitfile)
 # visitdir  - optional string name of function to call when entering directory,
 #             takes single parameter, name of dir without trailing /
 # leavedir  - optional string name of function to call when exiting directory,
-#             takes single parameter, name of dir without no trailing /
+#             takes single parameter, name of dir without trailing /
 # visitfile - optional string name of function to call when visiting file,
 #             takes single parameter, filename
 function walk(tree, visitdir, leavedir, visitfile,     dir, path) {
@@ -103,6 +103,46 @@ function walk(tree, visitdir, leavedir, visitfile,     dir, path) {
     }
     if (leavedir) {
         @leavedir(dir)
+    }
+}
+
+# Make a deep copy of 'orig' into 'copy'
+#
+# https://stackoverflow.com/a/62179751
+function clone(orig, copy,    i)
+{
+    # Empty "copy" for first call and delete the temp array added by
+    # copy[i][EMPTYARRAY] below for subsequent
+    delete copy
+
+    for (i in orig) {
+        if (awk::isarray(orig[i])) {
+            copy[i][EMPTYARRAY]
+            clone(orig[i], copy[i])
+        } else {
+            copy[i] = orig[i]
+        }
+    }
+}
+
+# Populate 'difftree' with all elements that are in tree 'a' but not in tree 'b'
+function diff(a, b, difftree,    i)
+{
+    clone(a, difftree)
+    remove_tree(difftree, b)
+}
+
+# Remove tree 'b' from 'a'. 'a' is modified, 'b' is not.
+function remove_tree(a, b)
+{
+    for (i in b) {
+        if (awk::isarray(b[i])) {
+            if (i in a) {
+                remove_tree(a[i], b[i])
+            }
+        } else {
+            delete a
+        }
     }
 }
 
@@ -179,4 +219,50 @@ function test_debug_print(    tree, actual, expected)
         "    c\n"
 
     utils::assert(actual == expected, "test_debug_print")
+}
+
+function test_clone(    tree, copy)
+{
+    delete tree
+    delete tree["test"]
+    tree["test"]["a"] = ""
+    delete tree["test"]["dir"]
+    tree["test"]["dir"]["b"] = ""
+
+    clone(tree, copy)
+
+    utils::assert(length(copy) == 1, "length(copy) == 1")
+    utils::assert("test" in copy, "\"test\" in copy")
+    utils::assert(length(copy["test"]) == 2, "length(copy[\"test\"]) == 2")
+    utils::assert("a" in copy["test"], "\"a\" in copy[\"test\"]")
+    utils::assert(copy["a"] == "", "copy[\"a\"] == \"\"")
+    utils::assert("dir" in copy["test"], "\"dir\" in copy[\"test\"]")
+    utils::assert(awk::typeof(copy["dir"] == "array"), "typeof(copy[\"dir\"] == \"array\")")
+    utils::assert("b" in copy["test"]["dir"], "\"b\" in copy[\"test\"][\"dir\"]")
+    utils::assert(copy["test"]["dir"]["b"] == "", "copy[\"test\"][\"dir\"][\"b\"] == \"\"")
+}
+
+function test_diff(    a, b, difftree)
+{
+    delete a
+    delete a["test"]
+    a["test"]["a"] = ""
+    delete a["test"]["dir"]
+    a["test"]["dir"]["b"] = ""
+
+    delete b
+    delete b["test"]
+    delete b["test"]["dir"]
+    b["test"]["dir"]["b"] = ""
+
+    delete difftree
+    diff(a, b, difftree)
+
+    utils::assert(length(difftree) == 1, "length(difftree) == 1")
+    utils::assert("test" in difftree, "\"test\" in difftree")
+    utils::assert(length(difftree["test"]) == 2, "length(difftree[\"test\"]) == 2")
+    utils::assert("a" in difftree["test"], "\"a\" in difftree[\"test\"]")
+    utils::assert(difftree["a"] == "", "difftree[\"a\"] == \"\"")
+    utils::assert("dir" in difftree["test"], "\"dir\" in difftree[\"test\"]")
+    utils::assert(!("b" in difftree["test"]["dir"]), "!(\"b\" in difftree[\"test\"][\"dir\"])")
 }
