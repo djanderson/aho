@@ -23,9 +23,16 @@ function run_command(    shortopts, longopts, c)
     print long_status()
 }
 
-function long_status()
+function long_status(    status)
 {
-    return describe_head()
+    # 1. Branch or detached HEAD commit
+    # 2. Differences between index file and current HEAD commit
+    # 3. Paths that have differences between the working tree and the index file
+    # 4. Paths in the working tree that are in the index (and not ignored)
+    status = describe_head()
+
+
+    return status
 }
 
 function describe_head()

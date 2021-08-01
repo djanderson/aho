@@ -102,13 +102,19 @@ function copy_entry(from, to,    key)
 }
 
 # Given an IndexEntry, return 1 if up-to-date in index
+# https://github.com/git/git/blob/master/Documentation/technical/racy-git.txt#L36
 function entry_up_to_date(entry,    filename)
 {
     filename = entry["filename"]
-    # TODO: check if this how Git decides file is up-to-date
     return (indexfile::has_file(filename) &&
-            (entry["mtime"] == Files[filename]["mtime"] &&
-             entry["ctime"] == Files[filename]["ctime"]))
+            (entry["ctime"] == Files[filename]["ctime"] &&
+             entry["mtime"] == Files[filename]["mtime"] &&
+             entry["dev"]   == Files[filename]["dev"]   &&
+             entry["ino"]   == Files[filename]["ino"]   &&
+             entry["mode"]  == Files[filename]["mode"]  &&
+             entry["uid"]   == Files[filename]["uid"]   &&
+             entry["gid"]   == Files[filename]["gid"]   &&
+             entry["size"]  == Files[filename]["size"])
 }
 
 function file_up_to_date(file)

@@ -53,7 +53,7 @@ function run_command(    shortopts, longopts, c, dryrun, quiet, cached,
 }
 
 function remove_files(pathspec, files, dryrun, quiet, cached, force, recurse,
-                      
+
                       n, modified, file, filestr, cmd)
 {
     # Check that all files are tracked in the index
@@ -69,6 +69,12 @@ function remove_files(pathspec, files, dryrun, quiet, cached, force, recurse,
     indexfile::remove_files(files)
 
     if (!force) {
+
+        # FIXME: also implement "staged" check
+        # error: the following file has changes staged in the index:
+        #     test1
+        # (use --cached to keep the file, or -f to force removal)
+
         delete modified
         for (file in files) {
             file = files[file]
@@ -97,13 +103,12 @@ function remove_files(pathspec, files, dryrun, quiet, cached, force, recurse,
             } else {
                 cmd = "rm "
             }
-            print "rm cmd: " cmd
             utils::assert(!system(cmd pathspec), "rm command failed")
         }
-        
+
         indexfile::write()
     }
-    
+
     if (!quiet) {
         PROCINFO["sorted_in"] = "@val_str_asc"
         for (file in files) {
