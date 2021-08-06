@@ -75,10 +75,10 @@ function prune_ignored(files,    copy, ignored, i, j, n)
 
 function add_files(files, dryrun, verbose,    file, added)
 {
-    indexfile::add(files)
+    indexfile::add_files(files)
 
     if (!dryrun) {
-        # objects::add_files adds object-id to indexfile::Files array
+        # objects::add_files adds object-id to indexfile::Entries array
         added = objects::add_files(files)
         if (added) {
             indexfile::write()

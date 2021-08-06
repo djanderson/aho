@@ -14,6 +14,11 @@ BEGIN {
         load_files(Files, path::Root, Ignore)
     }
 
+    delete Stats
+    if (path::InRepo) {
+        stat::stat_files(Stats, Files)
+    }
+
     delete Tree
     if (path::InRepo) {
         tree::add_files(Tree, Files)

@@ -10,6 +10,7 @@
 @include "head.awk"
 @include "index.awk"
 @include "workingtree.awk"
+@include "colors.awk"
 # Commands
 @include "config.awk"
 @include "init.awk"

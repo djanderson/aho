@@ -2,6 +2,17 @@
 
 
 BEGIN {
+    # A Stats array has the following keys
+    Stats[1] = "filename"    # str: path from repo root without leading ./
+    Stats[2] = "ctime"       # num: time last changed, seconds since epoch
+    Stats[3] = "mtime"       # num: time last modified, seconds since epoch
+    Stats[4] = "dev"         # num: device number
+    Stats[5] = "ino"         # num: inode number
+    Stats[6] = "mode"        # num: raw mode
+    Stats[7] = "uid"         # num: user ID of owner
+    Stats[8] = "gid"         # num: group ID of owner
+    Stats[9] = "size"        # num: file size in bytes
+
     # Canonical Git modes
     ModeFile  = 0100644  # Regular file
     ModeXFile = 0100755  # Executable file
@@ -40,56 +51,64 @@ BEGIN {
     S_IXOTH  = 00001     # others have execute permission
 }
 
-# Call stat and populate array 'stats' with the following information:
+# Given an array of relative file paths, stats will contain a Stats array under
+# each relpath.
 #
-# %n path from repo root without leading ./
-# %Z time last changed, seconds since epoch
-# %Y time last modified, seconds since epoch
-# %d device number
-# %i inode number
-# %f raw mode (will be converted from hex to num)
-# %u user ID of owner
-# %g group ID of owner
-# %s file size in bytes
-function stat_file(relpath, stats,    abspath, cmd, line, mode) {
-    abspath = path::Root "/" relpath
-    cmd = "stat --printf '%n %Z %Y %d %i %f %u %g %s' " abspath
-    cmd | getline line
-    split(line, stats)
-    close(cmd)
-    stats[1] = relpath # use relative file path instead of absolute
-    # Use canonical git modes
-    mode = awk::strtonum("0x" stats[6])
-    if (s_isreg(mode)) {
-        if (owner_has_execute(mode)) {
-            mode = ModeXFile
-        } else {
-            mode = ModeFile
-        }
-    } else if (s_isdir(mode)) {
-        mode = ModeDir
-    } else if (s_islnk(mode)) {
-        mode = ModeLnk
+# e.g., if "README.md" is in relpaths, its size is stats["README.md"]["size"].
+function stat_files(stats, relpaths,    abspaths, relpath, mode, i, a, key)
+{
+    # Build a space-delimited list of abspaths
+    for (p in relpaths) {
+        abspaths = abspaths " " path::Root "/" relpaths[p]
     }
-    stats[6] = mode
+    cmd = "stat --printf '%n %Z %Y %d %i %f %u %g %s\n' " abspaths
+    i = 1
+    while ((cmd | getline line) > 0) {
+        relpath = relpaths[i++]
+        split(line, a)
+        for (key in Stats) {
+            stats[relpath][Stats[key]] = a[key]
+        }
+        stats[relpath]["filename"] = relpath # reset absolute -> relative path
+        mode = awk::strtonum("0x" stats[relpath]["mode"])
+        if (s_isreg(mode)) {
+            if (owner_has_execute(mode)) {
+                mode = ModeXFile
+            } else {
+                mode = ModeFile
+            }
+        } else if (s_isdir(mode)) {
+            mode = ModeDir
+        } else if (s_islnk(mode)) {
+            mode = ModeLnk
+        }
+        stats[relpath]["mode"] = mode
+    }
+    close(cmd)
 }
 
-# Return true if owner has execute permission
+# Return true if Stats["mode"] indicates owner has execute permission
 function owner_has_execute(m) {
     return !!awk::and(m, S_IXUSR)
 }
 
-# Return true if file type is regular file
+# Return true if Stats["mode"] indicates file type is regular file
 function s_isreg(m) {
     return awk::and(m, S_IFMT) == S_IFREG
 }
 
-# Return true if file type is directory
+# Return true if Stats["mode"] indicates file type is directory
 function s_isdir(m) {
     return awk::and(m, S_IFMT) == S_IFDIR
 }
 
-# Return true if file type is symbolic link
+# Return true if Stats["mode"] indicates file type is symbolic link
 function s_islnk(m) {
     return awk::and(m, S_IFMT) == S_IFLNK
+}
+
+function debug_print(stats,    key) {
+    for (key in Stats) {
+        print "  Stats['" Stats[key] "'] = " stats[Stats[key]]
+    }
 }

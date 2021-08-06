@@ -17,7 +17,7 @@ BEGIN {
     Header = "DIRC"
     Version = "\0\0\0\2"
 
-    # An IndexEntry has the following keys
+    # An IndexEntry has the following keys (1 - 9 are same as stat::Stats)
     IndexEntry[1] = "filename"    # str: path from repo root without leading ./
     IndexEntry[2] = "ctime"       # num: time last changed, seconds since epoch
     IndexEntry[3] = "mtime"       # num: time last modified, seconds since epoch
@@ -31,27 +31,28 @@ BEGIN {
     IndexEntry[11] = "up-to-date" # num: if 1, entry is up-to-date in index
     IndexEntry[12] = "removed"    # num: if 1, entry will not be written out
 
-    # Files is an associative array-of-arrays, with layout
+    # Entries is an associative array-of-arrays, with layout
     #
-    #     Files[filepath] =
+    #     Entries[filepath] =
     #         IndexEntry[ctime] = 12345
     #         IndexEntry[mtime] = 12345
     #         ...
     #     ...
-    delete Files
-    indexfile::read(Files)
+    delete Entries
+    indexfile::read(Entries)
 }
 
 # Add files to the index.
 #
-# - files: array of path strings
-function add(files,    file, entry)
+# - relpaths: array of path strings relative to repo root
+function add_files(relpaths,    files, p)
 {
-    for (file in files) {
-        delete entry
-        create_entry(entry, files[file])
-        if (!entry["up-to-date"]) {
-            add_entry(entry)
+    stat::stat_files(files, relpaths)
+    for (p in relpaths) {
+        relpath = relpaths[p]
+        files[relpath]["up-to-date"] = entry_up_to_date(files[relpath])
+        if (!files[relpath]["up-to-date"]) {
+            add_entry(files[relpath])
         }
     }
 }
@@ -59,76 +60,60 @@ function add(files,    file, entry)
 # Remove files from the index.
 #
 # - file: array of path strings
-function remove_files(files,    file)
+function remove_files(files,    filename, f)
 {
-    for (file in files) {
-        file = files[file]
-        Files[file]["removed"] = 1
+    for (f in files) {
+        filename = files[f]
+        Entries[filename]["removed"] = 1
     }
 }
 
-# Parse an IndexEntry array from stat.
-#
-# - entry: empty array where index entry will be written
-# - filepath: string path relative to repo root
-function create_entry(entry, filepath,    stats, key)
-{
-    stat::stat_file(filepath, stats)
-
-    for (key in IndexEntry) {
-        entry[IndexEntry[key]] = stats[key]
-    }
-
-    entry["up-to-date"] = entry_up_to_date(entry)
-}
-
-# Add an IndexEntry to Files.
+# Add an IndexEntry to Entries.
 function add_entry(entry,    filename, key)
 {
     filename = entry["filename"]
 
-    delete Files[filename]
+    delete Entries[filename]
     for (key in entry) {
-        Files[filename][key] = entry[key]
+        Entries[filename][key] = entry[key]
     }
 }
 
 function copy_entry(from, to,    key)
 {
-    for (key in IndexEntry) {
-        key = IndexEntry[key]
+    for (key in from) {
         to[key] = from[key]
     }
 }
 
-# Given an IndexEntry, return 1 if up-to-date in index
+# Given a stats::Stats array or IndexEntry, return 1 if up-to-date in index
 # https://github.com/git/git/blob/master/Documentation/technical/racy-git.txt#L36
 function entry_up_to_date(entry,    filename)
 {
     filename = entry["filename"]
     return (indexfile::has_file(filename) &&
-            (entry["ctime"] == Files[filename]["ctime"] &&
-             entry["mtime"] == Files[filename]["mtime"] &&
-             entry["dev"]   == Files[filename]["dev"]   &&
-             entry["ino"]   == Files[filename]["ino"]   &&
-             entry["mode"]  == Files[filename]["mode"]  &&
-             entry["uid"]   == Files[filename]["uid"]   &&
-             entry["gid"]   == Files[filename]["gid"]   &&
-             entry["size"]  == Files[filename]["size"])
+            (entry["ctime"] == Entries[filename]["ctime"] &&
+             entry["mtime"] == Entries[filename]["mtime"] &&
+             entry["dev"]   == Entries[filename]["dev"]   &&
+             entry["ino"]   == Entries[filename]["ino"]   &&
+             entry["mode"]  == Entries[filename]["mode"]  &&
+             entry["uid"]   == Entries[filename]["uid"]   &&
+             entry["gid"]   == Entries[filename]["gid"]   &&
+             entry["size"]  == Entries[filename]["size"]))
 }
 
 function file_up_to_date(file)
 {
-    return has_file(file) && Files[file]["up-to-date"]
+    return has_file(file) && Entries[file]["up-to-date"]
 }
 
 # Return 1 if index contains an entry with the given filename
 function has_file(filename)
 {
-    return filename in Files
+    return filename in Entries
 }
 
-function read(Files,    bytes, nbytes, num_entries, read_entries, filename,
+function read(Entries,    bytes, nbytes, num_entries, read_entries, filename,
                         filename_len, offset)
 {
     if (!Exists)
@@ -142,24 +127,24 @@ function read(Files,    bytes, nbytes, num_entries, read_entries, filename,
     offset = 13                 # byte after header
 
     while (read_entries < num_entries) {
-        # Seek ahead to read filename to use as Files array key
+        # Seek ahead to read filename to use as Entries array key
         filename_len = read_flags(substr(bytes, offset + 60, 2))
         filename = substr(bytes, offset + 62, filename_len)
 
-        # Read index entry into Files array
-        delete Files[filename]
-        Files[filename]["filename"] = filename
-        Files[filename]["ctime"] = utils::uint32_to_num(substr(bytes, offset, 4))
-        Files[filename]["mtime"] = utils::uint32_to_num(substr(bytes, offset + 8, 4))
-        Files[filename]["dev"] = utils::uint32_to_num(substr(bytes, offset + 16, 4))
-        Files[filename]["ino"] = utils::uint32_to_num(substr(bytes, offset + 20, 4))
-        Files[filename]["mode"] = utils::uint32_to_num(substr(bytes, offset + 24, 4))
-        Files[filename]["uid"] = utils::uint32_to_num(substr(bytes, offset + 28, 4))
-        Files[filename]["gid"] = utils::uint32_to_num(substr(bytes, offset + 32, 4))
-        Files[filename]["size"] = utils::uint32_to_num(substr(bytes, offset + 36, 4))
-        Files[filename]["object-id"] = utils::bytes_to_hex(substr(bytes, offset + 40, 20))
-        Files[filename]["up-to-date"] = 1
-        Files[filename]["removed"] = 0
+        # Read index entry into Entries array
+        delete Entries[filename]
+        Entries[filename]["filename"] = filename
+        Entries[filename]["ctime"] = utils::uint32_to_num(substr(bytes, offset, 4))
+        Entries[filename]["mtime"] = utils::uint32_to_num(substr(bytes, offset + 8, 4))
+        Entries[filename]["dev"] = utils::uint32_to_num(substr(bytes, offset + 16, 4))
+        Entries[filename]["ino"] = utils::uint32_to_num(substr(bytes, offset + 20, 4))
+        Entries[filename]["mode"] = utils::uint32_to_num(substr(bytes, offset + 24, 4))
+        Entries[filename]["uid"] = utils::uint32_to_num(substr(bytes, offset + 28, 4))
+        Entries[filename]["gid"] = utils::uint32_to_num(substr(bytes, offset + 32, 4))
+        Entries[filename]["size"] = utils::uint32_to_num(substr(bytes, offset + 36, 4))
+        Entries[filename]["object-id"] = utils::bytes_to_hex(substr(bytes, offset + 40, 20))
+        Entries[filename]["up-to-date"] = 1
+        Entries[filename]["removed"] = 0
 
         # Each entry is 62 fixed bytes, a NULL-terminated filename, and then as
         # many NULL bytes as required to make the total length a power of 2
@@ -170,35 +155,35 @@ function read(Files,    bytes, nbytes, num_entries, read_entries, filename,
     return num_entries
 }
 
-# Write Files to index
-function write(    files, file, filename, index_bytes, bytes, nbytes, hash)
+# Write Entries to index
+function write(    entries, file, filename, index_bytes, bytes, nbytes, hash)
 {
-    delete files                # local copy of Files without removed entries
-    for (file in Files) {
-        if (!Files[file]["removed"]) {
-            files[file][EMPTYTREE] # ensure files[file] is passed as array
-            copy_entry(Files[file], files[file])
+    delete entries                # local copy of Entries without removed entries
+    for (file in Entries) {
+        if (!Entries[file]["removed"]) {
+            entries[file][EMPTYTREE] # ensure entries[file] is passed as array
+            copy_entry(Entries[file], entries[file])
         }
     }
 
     # 4-byte signature DIRC (dircache), 4-byte version 2, and number of entries
-    index_bytes = Header Version utils::num_to_uint32(length(files))
+    index_bytes = Header Version utils::num_to_uint32(length(entries))
 
-    # Serialize each IndexEntry in the Files array in sorted order
+    # Serialize each IndexEntry in the Entries array in sorted order
     PROCINFO["sorted_in"] = "@ind_str_asc"
-    for (filename in files) {
+    for (filename in entries) {
         bytes = ""
-        bytes = bytes utils::num_to_uint32(files[filename]["ctime"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["ctime"])
         bytes = bytes utils::num_to_uint32(0) # 0 nanoseconds
-        bytes = bytes utils::num_to_uint32(files[filename]["mtime"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["mtime"])
         bytes = bytes utils::num_to_uint32(0) # 0 nanoseconds
-        bytes = bytes utils::num_to_uint32(files[filename]["dev"])
-        bytes = bytes utils::num_to_uint32(files[filename]["ino"])
-        bytes = bytes utils::num_to_uint32(files[filename]["mode"])
-        bytes = bytes utils::num_to_uint32(files[filename]["uid"])
-        bytes = bytes utils::num_to_uint32(files[filename]["gid"])
-        bytes = bytes utils::num_to_uint32(files[filename]["size"])
-        bytes = bytes utils::hex_to_bytes(files[filename]["object-id"], 20)
+        bytes = bytes utils::num_to_uint32(entries[filename]["dev"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["ino"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["mode"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["uid"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["gid"])
+        bytes = bytes utils::num_to_uint32(entries[filename]["size"])
+        bytes = bytes utils::hex_to_bytes(entries[filename]["object-id"], 20)
         bytes = bytes build_flags(filename)
         bytes = bytes filename "\0"
         nbytes = length(bytes)

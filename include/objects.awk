@@ -28,10 +28,10 @@ function add_files(files,    file, filename, size, hash, num_added)
         if (indexfile::file_up_to_date(filename)) {
             continue
         }
-        size = indexfile::Files[filename]["size"]
+        size = indexfile::Entries[filename]["size"]
         hash = add_blob(filename, size)
         if (hash) {
-            indexfile::Files[filename]["object-id"] = hash
+            indexfile::Entries[filename]["object-id"] = hash
             num_added++
         }
     }

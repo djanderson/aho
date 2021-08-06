@@ -62,14 +62,14 @@ function add_file(tree, parts, nparts, depth, empty)
 }
 
 # Walk tree depth-first
-function walk_dfs(tree, visitdir, leavedir, visitfile)
+function walk_dfs(tree, markfile)
 {
     PROCINFO["sorted_in"] = "@val_type_desc" # visit (dir) subarrays first
     walk(tree, visitdir, leavedir, visitfile)
 }
 
 # Walk tree breadth-first
-function walk_bfs(tree, visitdir, leavedir, visitfile)
+function walk_bfs(tree, markfile)
 {
     PROCINFO["sorted_in"] = "@val_type_asc"  # visit (file) strings first
     walk(tree, visitdir, leavedir, visitfile)
@@ -80,29 +80,20 @@ function walk_bfs(tree, visitdir, leavedir, visitfile)
 # If not called via `walk_dfs` or `walk_bfs` above, you are responsible for
 # selecting the scan order of the tree.
 #
-# visitdir  - optional string name of function to call when entering directory,
-#             takes single parameter, name of dir without trailing /
-# leavedir  - optional string name of function to call when exiting directory,
-#             takes single parameter, name of dir without trailing /
-# visitfile - optional string name of function to call when visiting file,
-#             takes single parameter, filename
-function walk(tree, visitdir, leavedir, visitfile,     dir, path) {
-    if (visitdir) {
-        @visitdir(dir)
-    }
+# markfile - optional string name of function to call on each file path. Takes
+#            single parameter, path, the full path of the file, and must return
+#            the string to mark the file with.
+function walk(tree, markfile,     dir, path) {
     for (name in tree) {
         path = dir ? dir "/" name : name
         if (awk::typeof(tree[name]) == "array") {
             walk(tree[name], visitdir, leavedir, visitfile, path)
         } else {
             # leaf
-            if (visitfile) {
-                @visitfile(name)
+            if (markfile) {
+                tree[name] = @markfile(path)
             }
         }
-    }
-    if (leavedir) {
-        @leavedir(dir)
     }
 }
 
@@ -126,14 +117,14 @@ function clone(orig, copy,    i)
 }
 
 # Populate 'difftree' with all elements that are in tree 'a' but not in tree 'b'
-function diff(a, b, difftree,    i)
+function diff(a, b, difftree)
 {
     clone(a, difftree)
     remove_tree(difftree, b)
 }
 
 # Remove tree 'b' from 'a'. 'a' is modified, 'b' is not.
-function remove_tree(a, b)
+function remove_tree(a, b,    i)
 {
     for (i in b) {
         if (awk::isarray(b[i])) {
@@ -144,24 +135,6 @@ function remove_tree(a, b)
             delete a
         }
     }
-}
-
-# Example visitdir parameter for tree::walk
-function visitdir(dir)
-{
-    print "starting dir: " dir
-}
-
-# Example leavedir parameter for tree::walk
-function leavedir(dir)
-{
-    print "done dir: " dir
-}
-
-# Example visitfile parameter for tree::walk
-function visitfile(file)
-{
-    print "done file: " file
 }
 
 # Print the tree; return the printed string
