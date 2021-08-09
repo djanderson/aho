@@ -96,6 +96,8 @@ function print_help()
     print "  add         Add file contents to the index"
     print "  rm          Remove files from the working tree and from the index"
     print "  config      Read or modify " path::AhoDir "/config"
+    print "  status      Show the working tree status"
+    print "  commit      Record changes to the repository"
 }
 
 function print_version()

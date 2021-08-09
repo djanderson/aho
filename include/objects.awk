@@ -62,6 +62,16 @@ function add_blob(filename, size,    blob, hash, first2, rest, objfile)
     }
 }
 
+function add_tree()
+{
+    # TODO
+}
+
+function add_commit()
+{
+    # TODO
+}
+
 # zlib compress 'bytes' and write them to 'path' - directory must exist
 function zlib_compress(bytes, filepath,    zlib, check)
 {

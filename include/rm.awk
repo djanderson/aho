@@ -4,8 +4,8 @@
 function run_command(    shortopts, longopts, c, dryrun, quiet, cached,
                          recurse, force, files, pathspec, got_pathspec)
 {
-    shortopts = "hnqr"
-    longopts = "help,dry-run,quiet,cached"
+    shortopts = "hnqfr"
+    longopts = "help,dry-run,quiet,cached,force"
 
     while ((c = getopt::getopt(ARGC, ARGV, shortopts, longopts)) != -1) {
         if (c == "?") {
@@ -39,6 +39,9 @@ function run_command(    shortopts, longopts, c, dryrun, quiet, cached,
             return 128
         }
         path::expand_pathspec(files, pathspec)
+        # FIXME: --cached should skip this check
+        #        i.e., create a file, add it, rm it (not aho rm) and then try
+        #        `aho rm --cached <file>` to remove it from index - fails here
         if (length(files) == 0) {
             print "fatal: pathspec '" pathspec "' did not match any files"
             return 128
