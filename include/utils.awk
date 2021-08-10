@@ -696,3 +696,8 @@ function short_hash(commit, n)
     n = n ? n : 7
     return substr(commit, 1, n)
 }
+
+# Based on https://gist.github.com/andrewrcollins/1592991
+function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
+function rtrim(s) { sub(/[[:space:]]+$/, "", s); return s }
+function trim(s)  { return rtrim(ltrim(s)); }

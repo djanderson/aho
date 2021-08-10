@@ -41,8 +41,14 @@ function run_command(    shortopts, longopts, c, dryrun, file, message,
         msg = cleanup(file)
     } else {
         # Launch editor
-        # TODO: pull from config.core.editor
-        editor = "emacsclient"
+        editor = config::get("core.editor")
+        if (!editor) {
+            editor = ENVIRON["EDITOR"]
+        }
+        if (!editor) {
+            editor = "vi"
+        }
+        exit
         if (system(editor " " EditMsgPath) != 0) {
             print "error: There was a problem with the editor '" editor "'." \
                 > "/dev/stderr"

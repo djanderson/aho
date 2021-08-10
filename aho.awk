@@ -73,6 +73,8 @@ function main(    shortopts, longopts, c, command, exitcode)
         exitcode = catfile::run_command()
     } else if (command == "status") {
         exitcode = status::run_command()
+    } else if (command == "config") {
+        exitcode = config::run_command()
     } else {
         print "aho: " command " is not an aho command. See 'aho --help'\n" \
             > "/dev/stderr"
