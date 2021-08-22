@@ -69,7 +69,7 @@ function run_command(    shortopts, longopts, c, dryrun, file, message,
 }
 
 function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
-                           name, email)
+                           name, email, commit_hash)
 {
     for (file in indexfile::Entries) {
         if (indexfile::Entries[file]["removed"]) {
@@ -98,7 +98,10 @@ function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
     c = c "\n"
     c = c msg
 
-    objects::add_commit(c)
+    commit_hash = objects::add_commit(c)
+
+    # FIXME: msg summary, insertions, deletions, etc
+    print "[" head::Branch " " utils::short_hash(commit_hash) "] " msg
 }
 
 # Recursively walk the index tree and add tree objects
