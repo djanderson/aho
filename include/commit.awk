@@ -111,6 +111,7 @@ function commit_indextree(tree, dir,    path, contents, c, save_sorted, t, hash)
     for (name in tree) {
         path = dir ? dir "/" name : name
         if (awk::typeof(tree[name]) == "array") {
+            # Recurse next tree
             hash = commit_indextree(tree[name], path)
             contents[path] = sprintf( \
                 "%o %s\0%s",
@@ -118,6 +119,7 @@ function commit_indextree(tree, dir,    path, contents, c, save_sorted, t, hash)
                 path,
                 utils::hex_to_bytes(hash))
         } else {
+            # Add file to current tree's content
             contents[path] = sprintf( \
                 "%o %s\0%s",
                 indexfile::Entries[path]["mode"],

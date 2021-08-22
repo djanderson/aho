@@ -53,7 +53,25 @@ function run_command(    shortopts, longopts, c, show_type, show_size, type,
         print type
     } else if (pprint) {
         rest = substr(bytes, end_of_hdr + 1)
-        printf("%s", rest)
+        if (type == "tree") {
+            print_tree(rest)
+        } else {
+            printf("%s", rest)
+        }
+    }
+}
+
+function print_tree(rest,    mode, path, hash, type)
+{
+    while (match(rest, /([^[:blank:]]*) ([^\0]*)\0(.{20})/, groups) > 0) {
+        rest = substr(rest, RLENGTH + 1)
+
+        mode = awk::strtonum("0" groups[1]) # append 0 to force read as octal
+        path = groups[2]
+        hash = utils::bytes_to_hex(groups[3], 40)
+        type = (mode == stat::ModeDir) ? "tree" : "blob"
+
+        printf("%06o %s %s\t%s\n", mode, type, hash, path)
     }
 }
 
