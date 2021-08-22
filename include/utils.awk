@@ -690,6 +690,18 @@ function readfile(file,     tmp, save_rs)
     return tmp
 }
 
+# Read all lines of a file into the array `lines`; return number of read lines
+function readlines(file, lines,    save_rs, line, n)
+{
+    save_rs = RS
+    RS = "\n"
+    delete lines
+    while ((getline line < file) > 0) {
+        lines[++n] = line
+    }
+    return n
+}
+
 # Return the first n characters of a commit hash, default 7
 function short_hash(commit, n)
 {

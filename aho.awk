@@ -16,9 +16,9 @@
 @include "init.awk"
 @include "add.awk"
 @include "rm.awk"
+@include "status.awk"
 @include "commit.awk"
 @include "catfile.awk"
-@include "status.awk"
 
 @namespace "main"
 

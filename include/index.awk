@@ -113,6 +113,7 @@ function has_file(filename)
     return filename in Entries
 }
 
+# Read the index file into Entries
 function read(Entries,    bytes, nbytes, num_entries, read_entries, filename,
                         filename_len, offset)
 {

@@ -8,6 +8,9 @@ BEGIN {
     delete StagedNew      # in index but not in latest commit
     delete StagedModified # in index and latest commit, but different in index
     delete StagedDeleted  # in latest commit but not in index
+
+    compare_working_tree_to_index()
+    compare_index_to_commit()
 }
 
 function run_command(    shortopts, longopts, c)
@@ -26,8 +29,8 @@ function run_command(    shortopts, longopts, c)
         }
     }
 
-    compare_working_tree_to_index()
-    compare_index_to_commit()
+    # git status will automatically refresh the index - man git-status
+    indexfile::write()
 
     for_commit = 0
     colors = 1

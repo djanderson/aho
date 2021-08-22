@@ -4,19 +4,15 @@ A Git implementation in AWK.
 
 # But why?
 
-To explore the deep corners of GNU Awk (_gawk_) and Git.
-
- - Can AWK read and write Git's binary `index` file?
- - Where does AWK start to break down as a general-purpose programming language?
- - How does Git magic actually work?
- - etc...
-
-I will write-up my takeaways in this README as I get more features implemented.
+I've had the irrational desire to write something substantial in AWK for a
+while. Figured I might as well learn some Git internals while I scratch this
+itch.
 
 # Quickstart
 
 You'll need `gawk` >= 5.0, and I currently use `pigz` for zlib compression.
-Everything else should be provided by coreutils.
+Everything else should be provided by GNU coreutils. In other words, this
+should run on most linuxes, not so much on BSDs/Mac.
 
 ```bash
 $ source ./modpath
@@ -73,27 +69,18 @@ $ GIT_DIR=.aho git ls-files --stage
 
 # Contributing
 
-This is a toy project just for fun and learning. Therefore, Issues are closed
-(I know there are many!). I would be happy to evaluate Pull requests fixing
- - blatant errors
- - areas where AWK can be made more effective or idiomatic
- - misunderstandings of Git internals
-
-I'm not looking for new-feature PRs at this time, but feel free to fork and
-play along.
-
-[Discussions](https://github.com/djanderson/aho/discussions) are open for
-ideas, questions, etc.
-
-Thanks!
+I welcome any input that helps improve my knowledge of AWK or Git!
 
 # TODO:
 
 - [X] init
 - [X] add/rm
-- [ ] status
+- [X] status
 - [ ] commit
-- [ ] config
+- [ ] reset
+- [ ] branch
+- [ ] switch
+- [X] config (read-only)
 - [ ] ls-files
 - [X] cat-file
 

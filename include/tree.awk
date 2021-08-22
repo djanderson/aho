@@ -29,14 +29,13 @@
 # If the value is an (empty) string, the index represents a filename. If the
 # value is an array, the index represents a directory name. And empty
 # directory's value is an empty array.
-function add_files(tree, files,    file, parts)
+function add_files(tree, files,    file)
 {
     PROCINFO["sorted_in"] = "@val_type_asc"
     for (file in files) {
         file = files[file]
         if (path::is_file(file)) { # skip directory names
-            split(file, parts, "/")
-            tree::add_file(tree, parts, length(parts), 1)
+            tree::add_file(tree, file)
         }
     }
 }
@@ -44,7 +43,14 @@ function add_files(tree, files,    file, parts)
 # Given file "test/dir/c", add tree["test"]["dir"]["c"] = ""
 #
 # Based on https://stackoverflow.com/a/43946907
-function add_file(tree, parts, nparts, depth, empty)
+function add_file(tree, file,    parts)
+{
+    split(file, parts, "/")
+    tree::add_parts(tree, parts, length(parts), 1)
+}
+
+# Recursive helper function to add a file path split on "/"
+function add_parts(tree, parts, nparts, depth, empty)
 {
     if (empty) {
         delete tree[EMPTYTREE]
@@ -55,39 +61,36 @@ function add_file(tree, parts, nparts, depth, empty)
             tree[parts[depth]][EMPTYTREE] # ensure tree[parts[depth]] is array
             empty = 1
         }
-        tree::add_file(tree[parts[depth]], parts, nparts, depth + 1, empty)
+        tree::add_parts(tree[parts[depth]], parts, nparts, depth + 1, empty)
     } else {
         tree[parts[depth]] = ""
     }
 }
 
 # Walk tree depth-first
-function walk_dfs(tree, markfile)
+function set_dfs()
 {
     PROCINFO["sorted_in"] = "@val_type_desc" # visit (dir) subarrays first
-    walk(tree, visitdir, leavedir, visitfile)
 }
 
 # Walk tree breadth-first
-function walk_bfs(tree, markfile)
+function set_bfs()
 {
     PROCINFO["sorted_in"] = "@val_type_asc"  # visit (file) strings first
-    walk(tree, visitdir, leavedir, visitfile)
 }
 
 # Walk a tree.
 #
-# If not called via `walk_dfs` or `walk_bfs` above, you are responsible for
-# selecting the scan order of the tree.
+# You may want to call `set_dfs` or `set_bfs` first to control walk strategy.
 #
 # markfile - optional string name of function to call on each file path. Takes
 #            single parameter, path, the full path of the file, and must return
 #            the string to mark the file with.
-function walk(tree, markfile,     dir, path) {
+function walk(tree, markfile, dir,    path) {
     for (name in tree) {
         path = dir ? dir "/" name : name
         if (awk::typeof(tree[name]) == "array") {
-            walk(tree[name], visitdir, leavedir, visitfile, path)
+            walk(tree[name], markfile, path)
         } else {
             # leaf
             if (markfile) {

@@ -40,6 +40,8 @@ function run_command(    shortopts, longopts, c, dryrun, file, message,
     } else if (file) {
         msg = cleanup(file)
     } else {
+        prepare_editmsg_file()
+
         # Launch editor
         editor = config::get("core.editor")
         if (!editor) {
@@ -48,30 +50,114 @@ function run_command(    shortopts, longopts, c, dryrun, file, message,
         if (!editor) {
             editor = "vi"
         }
-        exit
         if (system(editor " " EditMsgPath) != 0) {
             print "error: There was a problem with the editor '" editor "'." \
                 > "/dev/stderr"
             print "Please supply the message using either -m or -F option." \
                 > "/dev/stderr"
+            exit 1
         }
         msg = cleanup(EditMsgPath)
     }
 
-    print "COMMIT_EDITMSG:"
-    print msg
-    print "Commit not implemented."
-    exit
+    if (!msg) {
+        print "Aborting commit due to empty commit message." > "/dev/stderr"
+        return 1
+    }
 
-    while ((pathspec = ARGV[getopt::Optind++])) {
-        got_pathspec = 1
-        path::expand_pathspec(files, pathspec)
-        if (length(files) == 0) {
-            print "fatal: pathspec '" pathspec "' did not match any files" \
-                > "/dev/stderr"
-            return 128
+    do_commit(msg)
+}
+
+function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
+                           name, email)
+{
+    for (file in indexfile::Entries) {
+        if (indexfile::Entries[file]["removed"]) {
+            continue
+        }
+        tree::add_file(indextree, file)
+    }
+
+    tree::set_dfs()
+    tree_hash = commit_indextree(indextree)
+
+    datetime_cmd = "date '+%s %z'"
+    datetime_cmd | getline datetime
+    close(datetime_cmd)
+
+    name = config::get("user.name")
+    email = config::get("user.email")
+
+    # Build the commit file contents
+    c = "tree " tree_hash "\n"
+    if (parent) {
+        c = c "parent " parent_hash "\n"
+    }
+    c = c "author " name " <" email "> " datetime "\n"
+    c = c "committer " name " <" email "> " datetime "\n"
+    c = c "\n"
+    c = c msg
+
+    objects::add_commit(c)
+}
+
+# Recursively walk the index tree and add tree objects
+function commit_indextree(tree, dir,    path, contents, c, save_sorted, t, hash)
+{
+    delete contents                # contents in this directory (tree)
+    for (name in tree) {
+        path = dir ? dir "/" name : name
+        if (awk::typeof(tree[name]) == "array") {
+            hash = commit_indextree(tree[name], path)
+            contents[path] = sprintf( \
+                "%o %s\0%s",
+                stat::ModeDir,
+                path,
+                utils::hex_to_bytes(hash))
+        } else {
+            contents[path] = sprintf( \
+                "%o %s\0%s",
+                indexfile::Entries[path]["mode"],
+                path,
+                utils::hex_to_bytes(indexfile::Entries[path]["object-id"], 20))
         }
     }
+
+    # End of dir: re-read contents in alphabetical order and build tree file
+    # contents, then add it to objects store
+    save_sorted = PROCINFO["sorted_in"]
+    PROCINFO["sorted_in"] = "@ind_str_asc"
+
+    t = ""
+    for (c in contents) {
+        t = t contents[c]
+    }
+    hash = objects::add_tree(t)
+
+    PROCINFO["sorted_in"] = save_sorted
+
+    return hash
+}
+
+function prepare_editmsg_file(    status, for_commit, color, status_lines,
+                                  line, s)
+{
+    for_commit = 1
+    color = 0
+    status = status::long_status(for_commit, color)
+    split(status, status_lines, "\n")
+
+    s = "\n\n"
+    s = s "# Please enter the commit message for your changes. Lines starting\n"
+    s = s "# with '#' will be ignored, and an empty message aborts the commit.\n"
+    s = s "#\n"
+
+    PROCINFO["sorted_in"] = "@ind_num_asc"
+    for (line in status_lines) {
+        s = s "# " status_lines[line] "\n"
+    }
+
+    print s > EditMsgPath
 }
 
 # Read the contents of 'file' and return a "cleaned-up" string.

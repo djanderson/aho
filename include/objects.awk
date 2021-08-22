@@ -39,11 +39,28 @@ function add_files(files,    file, filename, size, hash, num_added)
     return num_added
 }
 
-# Add file object to tree and return sha1 hash or 0 if failed
-function add_blob(filename, size,    blob, hash, first2, rest, objfile)
+function add_blob(filename, size)
 {
-    blob = "blob " size "\0" utils::readfile(filename)
-    hash = utils::sha1sum_str(blob)
+    return add_object(utils::readfile(filename), size, "blob")
+}
+
+function add_tree(tree)
+{
+    return add_object(tree, length(tree), "tree")
+}
+
+function add_commit(commit)
+{
+    return add_object(commit, length(commit), "commit")
+}
+
+function add_object(content, size, type,    bytes, hash, first2, rest, objfile)
+{
+    utils::assert(type == "blob" || type == "tree" || type == "commit",
+                  "objects::add_object, unknown object type '" type "'")
+
+    bytes = type " " size "\0" content
+    hash = utils::sha1sum_str(bytes)
 
     first2 = substr(hash, 1, 2)
     rest = substr(hash, 3)
@@ -54,22 +71,12 @@ function add_blob(filename, size,    blob, hash, first2, rest, objfile)
 
     objfile = objects::Dir "/" first2 "/" rest
 
-    if (zlib_compress(blob, objfile)) {
+    if (zlib_compress(bytes, objfile)) {
         return hash
     } else {
         print "Failed to zlib compress object" > "/dev/stderr"
         return 0
     }
-}
-
-function add_tree()
-{
-    # TODO
-}
-
-function add_commit()
-{
-    # TODO
 }
 
 # zlib compress 'bytes' and write them to 'path' - directory must exist

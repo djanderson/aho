@@ -46,58 +46,56 @@ function run_command(    shortopts, longopts, c, file, get_value, key, value)
         get_value = 1
     }
 
-    if (get_value) {
-        if ((value = get(key, file))) {
-            print value
-            return 0
-        } else {
-            return 1
-        }
+    if (!get_value) {
+        printf "fatal: config set/add not implemented" > "/dev/stderr"
+        print " - modify " LocalPath " manually" > "/dev/stderr"
+        return 1
+    }
+
+    value = get(key, file)
+    if (value) {
+        print value
+        return 0
     } else {
-        return set(section, subsection, name, value, file)
+        return 1
     }
 }
 
-# Get a value for a given key
-function get(key, file,    parts, nparts, section, subsection, name)
+function get(key, file,    parts, nparts, section, subsection, name, value)
 {
+    # Parse key into a [section <"subsection">] header and name
     split(key, parts, ".")
     nparts = length(parts)
     if (nparts < 2) {
-        print "error: key does not contain a section: " value > "/dev/stderr"
+        print "error: key does not contain a section: " key > "/dev/stderr"
     } else if (nparts == 2) {
         section = parts[1]
+        header = section
         name = parts[2]
     } else {
         section = parts[1]
         subsection = parts[2]
+        header = section " \"" subsection "\""
         name = parts[3]
     }
 
-    return get_(section, subsection, name, file)
-}
-
-function get_(section, subsection, name, file,    files, in_section, groups,
-                                                  value, value_update)
-{
+    # Decide which files to read
     if (file) {
         files[1] = file
     } else {
-        files[1] = config::GlobalPath
-        files[2] = config::LocalPath
-    }
-
-    if (subsection) {
-        section = section " \"" subsection "\""
+        # Scan local first so that values found there "override" global values
+        files[1] = config::LocalPath
+        files[2] = config::GlobalPath
     }
 
     for (file in files) {
         file = files[file]
-        while ((getline line < file) > 0) {
-            if (match(line, /^[[:blank:]]*[;#].*$/)) {
+        FS = "[[:blank:]]*=[[:blank:]]*"
+        while ((getline < file) > 0) {
+            if (match($0, /^[[:blank:]]*[;#].*$/)) {
                 # Comment line, ignore
                 continue
-            } else if (match(line, /^\[(.*)\]/, groups)) {
+            } else if (match($0, /^\[(.*)\]/, groups)) {
                 # Found section header [.*]
                 if (in_section) {
                     # Got to start of next section
@@ -108,9 +106,19 @@ function get_(section, subsection, name, file,    files, in_section, groups,
                     in_section = 1
                 }
             } else {
-                # Evaluate each line of section this looking for "name = value"
-                if ((value_update = parse_line(line, name))) {
-                    value = value_update
+                # Parse lines
+                if (in_section && utils::trim($1) == name) {
+                    if (match($2, /^"([^"]*)"/, groups)) {
+                        # If value is quoted, use part inside.
+                        value = groups[1]
+                    } else if (match($2, /(^[^;#]+)/, groups)) {
+                        # Strip trailing comments
+                        value = utils::trim(groups[1])
+                    } else {
+                        value = utils::trim($2)
+                    }
+
+                    return value
                 }
             }
         }
@@ -118,31 +126,6 @@ function get_(section, subsection, name, file,    files, in_section, groups,
         in_section = 0
     }
 
-    return value
-}
-
-# Parse line, return "value" associated with key "name"
-#
-# Known issue - values with escaped quote, "something like \"this\""
-function parse_line(line, name,    groups, value)
-{
-    if (match(line, /^[[:blank:]]*([[:alpha:]]+)[[:blank:]]*=[[:blank:]]*(.*)/, groups)) {
-        if (groups[1] == name) {
-            value = groups[2]
-            if (match(value, /^"([^"]*)"/, groups)) {
-                # If value is quoted, use part inside.
-                value = groups[1]
-            } else if (match(value, /(^[^;#]+)/, groups)) {
-                # Strip trailing comments
-                value = utils::trim(groups[1])
-            }
-        }
-    }
-    return value
-}
-
-function set(section, subsection, name, value, file)
-{
 }
 
 function init(directory,    path)
@@ -159,9 +142,4 @@ function init(directory,    path)
     print "	filemode = true" >> path
     print "	bare = false" >> path
     print "	logallrefupdates = true" >> path
-}
-
-function print_config_tree(tree)
-{
-    PROCINFO["sorted_in"] = "@val_type_desc" # visit (dir) subarrays first
 }
