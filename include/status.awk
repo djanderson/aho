@@ -55,6 +55,8 @@ function long_status(for_commit, colors,    status, file)
         }
     }
 
+    PROCINFO["sorted_in"] = "@val_str_asc"
+
     if (have_staged()) {
         status = status "\nChanges to be committed:\n"
         status = status "  (use \"aho rm --cached <file>...\" to unstage)\n"
@@ -63,6 +65,12 @@ function long_status(for_commit, colors,    status, file)
         }
         for (file in StagedNew) {
             status = status "\tnew file:   " StagedNew[file] "\n"
+        }
+        for (file in StagedModified) {
+            status = status "\tmodified:   " StagedModified[file] "\n"
+        }
+        for (file in StagedDeleted) {
+            status = status "\tdeleted:   " StagedDeleted[file] "\n"
         }
         if (colors) {
             status = status colors::Reset
@@ -130,25 +138,78 @@ function compare_working_tree_to_index(    relpath)
     }
 }
 
-function compare_index_to_commit(    relpath)
+function compare_index_to_commit(    relpath, obj, commit, commit_files)
 {
     if (!indexfile::Exists) {
-        # there are no staged files
+        # There are no staged files
         return
     }
 
     if (!head::Commit) {
-        # all files in the index are staged
+        # All files in the index are new
         for (relpath in indexfile::Entries) {
             StagedNew[length(StagedNew) + 1] = relpath
         }
         return
     }
 
-    # read the commit
+    # Read and parse the commit file pointed to by HEAD
+
+    delete obj
+    delete commit
+    delete commit_files
+
+    if (!objects::read_object(obj, head::Commit)) {
+        print "error: can't read HEAD file " head::Commit > "/dev/stderr"
+        return
+    }
+    if (obj["type"] != "commit") {
+        print "error: HEAD " head::Commit " not a commit" > "/dev/stderr"
+        return
+    }
+    if (!objects::parse_commit(commit, obj["bytes"])) {
+        print "error: can't parse HEAD commit " head::Commit > "/dev/stderr"
+        return
+    }
+
+    # Recursively parse tree objects to build an array of files in this commit
+
+    delete obj
+
+    if (!objects::read_object(obj, commit["tree"])) {
+        print "error: can't read tree file " commit["tree"] > "/dev/stderr"
+        return
+    }
+    if (obj["type"] != "tree") {
+        print "error: " commit["tree"] " not a tree" > "/dev/stderr"
+        return
+    }
+    # Since parse_tree is recursive, re-append a tree file header
+    if (!objects::parse_tree(commit_files, "tree 0\0" obj["bytes"])) {
+        print "error: can't parse tree " commit["tree"] > "/dev/stderr"
+        return
+    }
+
+    # Compare the index and commit
     # - in index but not in commit -> StagedNew
     # - in index and commit but different in index -> StagedModified
     # - in commit but not in index -> StagedDeleted
+
+    for (relpath in indexfile::Entries) {
+        if (relpath in commit_files) {
+            if (indexfile::Entries[relpath]["object-id"] != \
+                commit_files[relpath]["object-id"]) {
+                StagedModified[length(StagedModified) + 1] = relpath
+            }
+        } else {
+            StagedNew[length(StagedNew) + 1] = relpath
+        }
+    }
+    for (relpath in commit_files) {
+        if (!indexfile::has_file(relpath)) {
+            Deleted[length(Deleted) + 1] = relpath
+        }
+    }
 }
 
 function describe_head()

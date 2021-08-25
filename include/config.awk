@@ -117,15 +117,17 @@ function get(key, file,    parts, nparts, section, subsection, name, value)
                     } else {
                         value = utils::trim($2)
                     }
-
-                    return value
+                    break
                 }
             }
         }
         close(file)
         in_section = 0
+        if (value) {
+            break
+        }
     }
-
+    return value
 }
 
 function init(directory,    path)

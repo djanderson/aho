@@ -16,3 +16,10 @@ function init(directory,    path)
 
     return system("mkdir -p " path "/heads " path "/tags")
 }
+
+function set_head(branch, commit,    file)
+{
+    file = (refs::Dir "/heads/" branch)
+    print commit > file
+    close(file)
+}

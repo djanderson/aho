@@ -69,7 +69,7 @@ function run_command(    shortopts, longopts, c, dryrun, file, message,
 }
 
 function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
-                           name, email, commit_hash)
+                           name, email, commit_hash, summary)
 {
     for (file in indexfile::Entries) {
         if (indexfile::Entries[file]["removed"]) {
@@ -88,10 +88,14 @@ function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
     name = config::get("user.name")
     email = config::get("user.email")
 
+    if (!index(msg, "\n")) {
+        msg = msg "\n"
+    }
+
     # Build the commit file contents
     c = "tree " tree_hash "\n"
-    if (parent) {
-        c = c "parent " parent_hash "\n"
+    if (head::Commit) {
+        c = c "parent " head::Commit "\n"
     }
     c = c "author " name " <" email "> " datetime "\n"
     c = c "committer " name " <" email "> " datetime "\n"
@@ -100,8 +104,18 @@ function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
 
     commit_hash = objects::add_commit(c)
 
-    # FIXME: msg summary, insertions, deletions, etc
-    print "[" head::Branch " " utils::short_hash(commit_hash) "] " msg
+    if (head::Branch) {
+        refs::set_head(head::Branch, commit_hash)
+    }
+
+    summary = substr(msg, 1, index(msg, "\n") - 1)
+
+    # TODO: n files changed, insertion/deletions, etc: e.g.,
+    #  2 files changed, 1 insertion(+), 2 deletions(-)
+    #  delete mode 100644 README.md
+    #  create mode 100644 README2.md
+
+    print "[" head::Branch " " utils::short_hash(commit_hash) "] " summary
 }
 
 # Recursively walk the index tree and add tree objects

@@ -2,8 +2,7 @@
 
 
 function run_command(    shortopts, longopts, c, show_type, show_size, type,
-                         size, pprint, object, bytes, objpath, end_of_hdr,
-                         end_of_type, header, rest)
+                         size, pprint, hash, obj, objpath)
 {
     shortopts = "htsp"
     longopts = "help"
@@ -31,32 +30,32 @@ function run_command(    shortopts, longopts, c, show_type, show_size, type,
         }
     }
 
-    if (!(object = ARGV[getopt::Optind++])) {
+    if (!(hash = ARGV[getopt::Optind++])) {
         print_help()
         exit 129
     }
-    objpath = objects::find_file(object)
+    objpath = objects::find_file(hash)
     if (!objpath) {
-        print "fatal: Not a valid object name " object
+        print "fatal: Not a valid object name " hash  > "/dev/stderr"
         return 128
     }
 
-    bytes = objects::zlib_decompress(objpath)
-    end_of_hdr = index(bytes, "\0")
-    header = substr(bytes, 1, end_of_hdr - 1)
-    end_of_type = index(header, " ")
-    type = substr(header, 1, end_of_type - 1)
-    size = awk::strtonum(substr(header, end_of_type + 1))
+    delete obj
+    if (!objects::read_objfile(obj, objpath)) {
+        # FIXME: what's the right error msg?
+        print "fatal: not a valid object" > "/dev/stderr"
+        return 128
+    }
+
     if (show_size) {
-        print size
+        print obj["size"]
     } else if (show_type) {
-        print type
+        print obj["type"]
     } else if (pprint) {
-        rest = substr(bytes, end_of_hdr + 1)
-        if (type == "tree") {
-            print_tree(rest)
+        if (obj["type"] == "tree") {
+            print_tree(obj["bytes"])
         } else {
-            printf("%s", rest)
+            printf("%s", obj["bytes"])
         }
     }
 }

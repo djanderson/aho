@@ -76,7 +76,7 @@ I welcome any input that helps improve my knowledge of AWK or Git!
 - [X] init
 - [X] add/rm
 - [X] status
-- [ ] commit
+- [X] commit
 - [ ] reset
 - [ ] branch
 - [ ] switch

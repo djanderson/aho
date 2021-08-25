@@ -25,7 +25,7 @@ function init(directory,    path)
     }
 
     Path = directory "/HEAD"
-    set_ref("master")
+    set_ref("main")             # or master
 }
 
 # Read the raw value from HEAD and reset dependent globals
@@ -59,7 +59,7 @@ function get_commit(    refpath, commit)
 
     if (Branch) {
         # HEAD is a ref... follow it
-        refpath = path::Dir "/" substr(Raw, 6) # step past 'ref: '
+        refpath = path::AhoDir "/" substr(Raw, 6) # step past 'ref: '
         getline commit < refpath
         close(refpath)
         return commit
