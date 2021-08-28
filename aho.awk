@@ -5,6 +5,7 @@
 @include "stat.awk"
 @include "getopt.awk"
 @include "refs.awk"
+@include "reflog.awk"
 @include "branches.awk"
 @include "objects.awk"
 @include "head.awk"

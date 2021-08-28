@@ -91,11 +91,13 @@ function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
     if (!index(msg, "\n")) {
         msg = msg "\n"
     }
+    summary = substr(msg, 1, index(msg, "\n") - 1)
 
     # Build the commit file contents
     c = "tree " tree_hash "\n"
     if (head::Commit) {
         c = c "parent " head::Commit "\n"
+        old_commit = head::Commit
     }
     c = c "author " name " <" email "> " datetime "\n"
     c = c "committer " name " <" email "> " datetime "\n"
@@ -104,11 +106,15 @@ function do_commit(msg,    indextree, datetime_cmd, tree_hash, datetime, c,
 
     commit_hash = objects::add_commit(c)
 
+    reflog::append("HEAD", old_commit, commit_hash, name, email, datetime,
+                   "commit", summary)
+
     if (head::Branch) {
         refs::set_head(head::Branch, commit_hash)
+        reflog::append(head::Branch, old_commit, commit_hash, name, email,
+                       datetime, "commit", summary)
     }
 
-    summary = substr(msg, 1, index(msg, "\n") - 1)
 
     # TODO: n files changed, insertion/deletions, etc: e.g.,
     #  2 files changed, 1 insertion(+), 2 deletions(-)
