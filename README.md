@@ -2,11 +2,15 @@
 
 A Git implementation in AWK.
 
+![Terminal session showing aho](aho.gif)
+
 # But why?
 
-I've had the irrational desire to write something substantial in AWK for a
-while. Figured I might as well learn some Git internals while I scratch this
-itch.
+Modern AWK is capable of a lot more than one-liners. This is a toy project to
+explore some of the internals of Git and newer features of GNU AWK.
+
+It's not intended to be useful for anything other than entertainment and
+education.
 
 # Quickstart
 
